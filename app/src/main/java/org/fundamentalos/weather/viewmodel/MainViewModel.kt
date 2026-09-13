@@ -8,13 +8,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.Snapshot
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import org.fundamentalos.weather.ui.components.DailyWeatherInfo
-import org.fundamentalos.weather.ui.components.HourlyWeatherInfo
-import org.fundamentalos.weather.ui.components.MultilayerIcon
-import org.fundamentalos.weather.ui.components.WeatherIcons
 import org.fundamentalos.weather.weather.domain.AirQuality
 import org.fundamentalos.weather.weather.domain.CurrentWeather
 import org.fundamentalos.weather.weather.domain.DailyForecast
+import org.fundamentalos.weather.weather.domain.HourlyForecast
 import org.fundamentalos.weather.weather.domain.MinutelyPrecipitation
 import org.fundamentalos.weather.weather.domain.WeatherWarning
 import org.fundamentalos.weather.settings.AppSettings
@@ -26,8 +23,6 @@ import kotlinx.datetime.Instant
 import kotlin.time.Clock
 
 private const val TAG = "MainViewModel"
-
-private const val HourlyHours = 24
 
 class MainViewModel(
     private val weatherService: WeatherService,
@@ -48,11 +43,9 @@ class MainViewModel(
     val weather = mutableStateOf<CurrentWeather?>(null)
 
     val dailyForecast = mutableStateOf<List<DailyForecast>>(emptyList())
-    val dailyWeatherStatus = mutableStateOf(DailyWeatherStatus.Idle)
-    val dailyWeather = mutableStateOf<List<DailyWeatherInfo>>(emptyList())
+    val hourlyForecast = mutableStateOf<List<HourlyForecast>>(emptyList())
 
     val aqi = mutableStateOf<AirQuality?>(null)
-    val hourlyWeather = mutableStateOf<List<HourlyWeatherInfo>>(emptyList())
 
     val minutelyPrecipitation = mutableStateOf<MinutelyPrecipitation?>(null)
     val warnings = mutableStateOf<List<WeatherWarning>>(emptyList())
@@ -138,9 +131,6 @@ class MainViewModel(
         Init, Requesting, Ok, Error
     }
 
-    enum class DailyWeatherStatus {
-        Idle, Pending, Ok, Error
-    }
 
     data class Location(
         val name: String,
@@ -284,7 +274,6 @@ class MainViewModel(
             Log.d(TAG, "updateLocation: lat $latitude, lon: $longitude")
             cityStatus.value = CityStatus.Pending
             weatherStatus.value = WeatherStatus.Requesting
-            dailyWeatherStatus.value = DailyWeatherStatus.Pending
             try {
                 val snapshot = weatherService.getWeather(latitude, longitude)
                 if (!force) currentLocation.value?.let {
@@ -293,8 +282,8 @@ class MainViewModel(
                         return@launch
                     }
                 }
-                // Map first, then publish every field in one snapshot: written one by one, Compose can
-                // render a frame where, say, the daily forecast exists but the cards built from it do not.
+                // Publish every field in one snapshot: written one by one, Compose can render a
+                // frame where, say, the current weather is the new place's and the forecast the old.
                 val location = Location(
                     name = snapshot.location.name,
                     city = snapshot.location.city,
@@ -306,18 +295,6 @@ class MainViewModel(
                     lastUpdateTime = Clock.System.now(),
                     type = type,
                 )
-                val dailyInfo = snapshot.daily.map { it.toDailyWeatherInfo() }
-                // The card is a one-day strip; the source sends two days of hours.
-                val hourlyInfo = snapshot.hourly.take(HourlyHours).map {
-                    HourlyWeatherInfo(
-                        time = it.time.toString(),
-                        icon = iconCodeToWeatherIcon(it.condition.iconCode, it.condition.isDay ?: true),
-                        description = it.condition.text,
-                        conditionCode = it.condition.iconCode,
-                        temp = it.tempCelsius
-                    )
-                }
-
                 Snapshot.withMutableSnapshot {
                     currentLocation.value = location
                     // Kept apart from what is on screen: the locations page offers this one as
@@ -329,154 +306,17 @@ class MainViewModel(
                     weatherStatus.value = WeatherStatus.Ok
 
                     dailyForecast.value = snapshot.daily
-                    dailyWeather.value = dailyInfo
-                    dailyWeatherStatus.value = DailyWeatherStatus.Ok
+                    hourlyForecast.value = snapshot.hourly
 
                     aqi.value = snapshot.airQuality
                     minutelyPrecipitation.value = snapshot.minutelyPrecipitation
                     warnings.value = snapshot.warnings
-                    hourlyWeather.value = hourlyInfo
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "updateLocation: Failed to refresh weather", e)
                 cityStatus.value = CityStatus.Error
                 weatherStatus.value = WeatherStatus.Error
-                dailyWeatherStatus.value = DailyWeatherStatus.Error
             }
         }
     }
-}
-
-private fun DailyForecast.toDailyWeatherInfo(): DailyWeatherInfo {
-    return DailyWeatherInfo(
-        date = date.toString(),
-        icon = iconCodeToWeatherIcon(dayCondition.iconCode, dayCondition.isDay ?: true),
-        description = dayCondition.text,
-        conditionCode = dayCondition.iconCode,
-        probability = precipitationProbabilityPercent?.let { "$it%" },
-        tempMin = tempMinCelsius,
-        tempMax = tempMaxCelsius
-    )
-}
-
-/** Icon-code map: the shared numeric weather codes each map to a layered icon. */
-private val dayMaps = mapOf<String, () -> MultilayerIcon>(
-    "100" to { WeatherIcons.Clear },
-    "101" to { WeatherIcons.MostlyCloudy },
-    "102" to { WeatherIcons.MostlyClearWithIntermittentClouds },
-    "103" to { WeatherIcons.PartlyCloudy },
-    "104" to { WeatherIcons.Overcast },
-    "300" to { WeatherIcons.Shower },
-    "301" to { WeatherIcons.HeavyShower },
-    "302" to { WeatherIcons.Thunderstorm },
-    "303" to { WeatherIcons.SevereThunderstorm },
-    "304" to { WeatherIcons.ThunderstormWithHail },
-    "305" to { WeatherIcons.LightRain },
-    "306" to { WeatherIcons.ModerateRain },
-    "307" to { WeatherIcons.HeavyRain },
-    "308" to { WeatherIcons.ExtremeRain },
-    "309" to { WeatherIcons.Drizzle },
-    "310" to { WeatherIcons.TorrentialRain },
-    "311" to { WeatherIcons.SevereTorrentialRain },
-    "312" to { WeatherIcons.ExtremelySevereTorrentialRain },
-    "313" to { WeatherIcons.FreezingRain },
-    "314" to { WeatherIcons.LightToModerateRain },
-    "315" to { WeatherIcons.ModerateToHeavyRain },
-    "316" to { WeatherIcons.HeavyToTorrentialRain },
-    "317" to { WeatherIcons.TorrentialToSevereTorrentialRain },
-    "318" to { WeatherIcons.SevereTorrentialToExtremelySevereTorrentialRain },
-    "399" to { WeatherIcons.Rain },
-    "400" to { WeatherIcons.LightSnow },
-    "401" to { WeatherIcons.ModerateSnow },
-    "402" to { WeatherIcons.HeavySnow },
-    "403" to { WeatherIcons.Blizzard },
-    "404" to { WeatherIcons.RainAndSnowMix },
-    "405" to { WeatherIcons.RainAndSnow },
-    "406" to { WeatherIcons.ShowerWithSnow },
-    "407" to { WeatherIcons.SnowShower },
-    "408" to { WeatherIcons.LightToModerateSnow },
-    "409" to { WeatherIcons.ModerateToHeavySnow },
-    "410" to { WeatherIcons.HeavyToBlizzardSnow },
-    "499" to { WeatherIcons.Snow },
-    "500" to { WeatherIcons.LightFog },
-    "501" to { WeatherIcons.Fog },
-    "502" to { WeatherIcons.Haze },
-    "503" to { WeatherIcons.DustStorm },
-    "504" to { WeatherIcons.FloatingDust },
-    "507" to { WeatherIcons.Sandstorm },
-    "508" to { WeatherIcons.SevereSandstorm },
-    "509" to { WeatherIcons.DenseFog },
-    "510" to { WeatherIcons.SevereDenseFog },
-    "511" to { WeatherIcons.ModerateHaze },
-    "512" to { WeatherIcons.HeavyHaze },
-    "513" to { WeatherIcons.SevereHaze },
-    "514" to { WeatherIcons.HeavyFog },
-    "515" to { WeatherIcons.ExtremelyDenseFog },
-    "900" to { WeatherIcons.Hot },
-    "901" to { WeatherIcons.Cold },
-    "999" to { WeatherIcons.Unknown },
-)
-
-private val nightMap = mapOf<String, () -> MultilayerIcon>(
-    "150" to { WeatherIcons.ClearNight },
-    "151" to { WeatherIcons.MostlyCloudyNight },
-    "152" to { WeatherIcons.MostlyClearWithIntermittentCloudsNight },
-    "153" to { WeatherIcons.PartlyCloudyNight },
-    "104" to { WeatherIcons.Overcast },
-    "350" to { WeatherIcons.ShowerNight },
-    "351" to { WeatherIcons.HeavyShowerNight },
-    "302" to { WeatherIcons.Thunderstorm },
-    "303" to { WeatherIcons.SevereThunderstorm },
-    "304" to { WeatherIcons.ThunderstormWithHail },
-    "305" to { WeatherIcons.LightRain },
-    "306" to { WeatherIcons.ModerateRain },
-    "307" to { WeatherIcons.HeavyRain },
-    "308" to { WeatherIcons.ExtremeRain },
-    "309" to { WeatherIcons.Drizzle },
-    "310" to { WeatherIcons.TorrentialRain },
-    "311" to { WeatherIcons.SevereTorrentialRain },
-    "312" to { WeatherIcons.ExtremelySevereTorrentialRain },
-    "313" to { WeatherIcons.FreezingRain },
-    "314" to { WeatherIcons.LightToModerateRain },
-    "315" to { WeatherIcons.ModerateToHeavyRain },
-    "316" to { WeatherIcons.HeavyToTorrentialRain },
-    "317" to { WeatherIcons.TorrentialToSevereTorrentialRain },
-    "318" to { WeatherIcons.SevereTorrentialToExtremelySevereTorrentialRain },
-    "400" to { WeatherIcons.LightSnow },
-    "401" to { WeatherIcons.ModerateSnow },
-    "402" to { WeatherIcons.HeavySnow },
-    "403" to { WeatherIcons.Blizzard },
-    "404" to { WeatherIcons.RainAndSnowMix },
-    "405" to { WeatherIcons.RainAndSnow },
-    "456" to { WeatherIcons.ShowerWithSnowNight },
-    "457" to { WeatherIcons.SnowShowerNight },
-    "408" to { WeatherIcons.LightToModerateSnow },
-    "409" to { WeatherIcons.ModerateToHeavySnow },
-    "410" to { WeatherIcons.HeavyToBlizzardSnow },
-    "499" to { WeatherIcons.Snow },
-    "500" to { WeatherIcons.LightFog },
-    "501" to { WeatherIcons.Fog },
-    "502" to { WeatherIcons.Haze },
-    "503" to { WeatherIcons.DustStorm },
-    "504" to { WeatherIcons.FloatingDust },
-    "507" to { WeatherIcons.Sandstorm },
-    "508" to { WeatherIcons.SevereSandstorm },
-    "509" to { WeatherIcons.DenseFog },
-    "510" to { WeatherIcons.SevereDenseFog },
-    "511" to { WeatherIcons.ModerateHaze },
-    "512" to { WeatherIcons.HeavyHaze },
-    "513" to { WeatherIcons.SevereHaze },
-    "514" to { WeatherIcons.HeavyFog },
-    "515" to { WeatherIcons.ExtremelyDenseFog },
-    "900" to { WeatherIcons.Hot },
-    "901" to { WeatherIcons.Cold },
-    "999" to { WeatherIcons.Unknown }
-)
-
-private fun iconCodeToWeatherIcon(code: String): MultilayerIcon {
-    return dayMaps[code]?.invoke() ?: nightMap[code]?.invoke() ?: WeatherIcons.Unknown
-}
-
-private fun iconCodeToWeatherIcon(code: String, isDay: Boolean): MultilayerIcon {
-    return (if (isDay) dayMaps else nightMap)[code]?.invoke() ?: iconCodeToWeatherIcon(code)
 }

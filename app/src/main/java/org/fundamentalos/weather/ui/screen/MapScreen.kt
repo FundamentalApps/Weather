@@ -286,15 +286,15 @@ fun MapScreen(
     }
 
     val weather = vm.weather.value
-    val today = vm.dailyWeather.value.firstOrNull()
+    val today = vm.dailyForecast.value.firstOrNull()
     val placeName = vm.currentLocation.value?.name ?: ""
     val caption = stringResource(R.string.current_location)
     LaunchedEffect(marker, center, weather, today, placeName, caption) {
         val bubble = marker ?: return@LaunchedEffect
         bubble.point = center
         bubble.tempCelsius = weather?.tempCelsius
-        bubble.minCelsius = today?.tempMin
-        bubble.maxCelsius = today?.tempMax
+        bubble.minCelsius = today?.tempMinCelsius
+        bubble.maxCelsius = today?.tempMaxCelsius
         bubble.caption = caption
         bubble.placeName = placeName
         mapView?.invalidate()

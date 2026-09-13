@@ -18,6 +18,8 @@ import androidx.compose.runtime.withFrameNanos
 import org.fundamentalos.weather.ui.components.DailyWeatherInfo
 import org.fundamentalos.weather.ui.components.GlassLoadingIndicator
 import org.fundamentalos.weather.ui.components.HourlyWeatherInfo
+import org.fundamentalos.weather.ui.components.toDailyWeatherInfo
+import org.fundamentalos.weather.ui.components.toHourlyWeatherInfo
 import org.fundamentalos.weather.weather.domain.AirQuality
 import org.fundamentalos.weather.weather.domain.CurrentWeather
 import org.fundamentalos.weather.weather.domain.DailyForecast
@@ -582,20 +584,29 @@ private data class HomeContent(
  * handing the page back to the device's location forgets the place before the new reading
  * comes, and the reading on show keeps its own sun until then.
  */
+@Composable
 private fun homeContent(vm: MainViewModel, place: DoubleArray): HomeContent? {
     val weather = vm.weather.value ?: return null
+    val forecast = vm.dailyForecast.value
+    val hours = vm.hourlyForecast.value
+    // The cards' own shapes of the forecast, made once per forecast rather than per frame.
+    val daily = remember(forecast) { forecast.map { it.toDailyWeatherInfo() } }
+    // The hourly card is a one-day strip; the source sends two days of hours.
+    val hourly = remember(hours) { hours.take(HourlyHours).map { it.toHourlyWeatherInfo() } }
     return HomeContent(
         weather = weather,
         latitude = place[0].takeIf { !it.isNaN() },
         longitude = place[1].takeIf { !it.isNaN() },
-        forecast = vm.dailyForecast.value,
-        daily = vm.dailyWeather.value,
+        forecast = forecast,
+        daily = daily,
         warnings = vm.warnings.value,
         minutely = vm.minutelyPrecipitation.value,
         aqi = vm.aqi.value,
-        hourly = vm.hourlyWeather.value,
+        hourly = hourly,
     )
 }
+
+private const val HourlyHours = 24
 
 /**
  * Brings a card up in its turn as the first reading arrives: it fades in and rises a little, a
