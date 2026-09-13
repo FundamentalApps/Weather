@@ -26,6 +26,12 @@ class WeatherFieldOverlay(
     private val store: WeatherFieldStore,
 ) : Overlay() {
     private val paint = Paint().apply { isFilterBitmap = true }
+
+    /**
+     * The base map's names and roads are under the field, not over it as on a vector map, so
+     * the field is kept translucent enough to read them through, whatever the server suggests.
+     */
+    private val opacity = minOf(source.layer.opacity, MaxOpacity)
     private val viewport = RectL()
     private val dst = RectF()
     private val clip = RectF()
@@ -155,12 +161,13 @@ class WeatherFieldOverlay(
 
     private fun drawChunk(canvas: Canvas, projection: Projection, bitmap: Bitmap, key: FieldChunkKey, fade: Float) {
         chunkRect(projection, key, dst)
-        paint.alpha = (source.layer.opacity * fade * 255).roundToInt()
+        paint.alpha = (opacity * fade * 255).roundToInt()
         canvas.drawBitmap(bitmap, null, dst, paint)
     }
 
     private companion object {
         const val FadeMillis = 300f
+        const val MaxOpacity = 0.55f
 
         /** Level = floor(zoom) - this, so a chunk spans 8 to 16 density-scaled tiles. */
         const val LevelOffset = 3

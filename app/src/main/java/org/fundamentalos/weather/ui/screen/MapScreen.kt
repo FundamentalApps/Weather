@@ -69,7 +69,6 @@ import org.fundamentalos.weather.ui.componets.conditionTextGlassMaterial
 import org.fundamentalos.weather.ui.componets.glassBackdropSource
 import org.fundamentalos.weather.ui.componets.rememberGlassBackdropState
 import org.fundamentalos.weather.ui.map.FieldLayerSource
-import org.fundamentalos.weather.ui.map.MapInkOverlay
 import org.fundamentalos.weather.ui.map.WeatherFieldOverlay
 import org.fundamentalos.weather.ui.map.WeatherFieldStore
 import org.fundamentalos.weather.ui.theme.PreviewThemeWithBg
@@ -249,7 +248,7 @@ fun MapScreen(
 
     // The overlays wait for a centre: a field overlay asks for the chunks under the view the
     // first time it is drawn, and until the location is known that view is (0°, 0°).
-    DisposableEffect(mapView, visible, center == null, darkMap) {
+    DisposableEffect(mapView, visible, center == null) {
         val map = mapView ?: return@DisposableEffect onDispose { }
         if (center == null) return@DisposableEffect onDispose { }
         map.controller.setCenter(center)
@@ -259,11 +258,6 @@ fun MapScreen(
             } else {
                 layer.toOverlay(context, map)
             }
-        }.toMutableList()
-        // A field covers the base map's names and roads; draw its ink again on top of it.
-        if (overlays.any { it is WeatherFieldOverlay }) {
-            overlays += MapInkOverlay(map.tileProvider, context, MapInkOverlay.Ink.Halos, darkMap)
-            overlays += MapInkOverlay(map.tileProvider, context, MapInkOverlay.Ink.Marks, darkMap)
         }
         overlays.forEachIndexed { index, overlay -> map.overlays.add(index, overlay) }
         map.invalidate()
