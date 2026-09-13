@@ -517,7 +517,8 @@ private fun SearchField(
             .padding(horizontal = FieldInset)
             .height(FieldHeight)
             .clip(RoundedRectangle(FieldCorner))
-            .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+            // A step brighter than the container it sits on, the way a field is lifted off a page.
+            .background(MaterialTheme.colorScheme.surfaceBright)
             .clickable(enabled = !searching, onClick = onUseLocation)
             .padding(horizontal = FieldPadding),
         verticalAlignment = Alignment.CenterVertically,
