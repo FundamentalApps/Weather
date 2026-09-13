@@ -100,6 +100,11 @@ fun Banner(
     overscroll: IosOverscrollState? = null,
     /** Whether the headline is arriving — rolling in — rather than already there. */
     enter: Boolean = false,
+    /**
+     * Pinned, the headline neither shrinks nor moves with the scroll and takes only its own
+     * height: sideways it stands at the left of the screen while the cards scroll at the right.
+     */
+    pinned: Boolean = false,
 ) {
     val density = LocalDensity.current
     // The headline travels 1:1 with the content: it is fully collapsed exactly when the space the
@@ -118,13 +123,13 @@ fun Banner(
     val glass = LocalGlassBackdrop.current != null
 
     fun fraction(): Float =
-        if (riseDistance <= 0f) 0f else (scrollState.value / riseDistance).coerceIn(0f, 1f)
+        if (pinned || riseDistance <= 0f) 0f else (scrollState.value / riseDistance).coerceIn(0f, 1f)
 
     fun shrink(fraction: Float): Float =
         ((1f - exp(-ShrinkDecay * fraction)) / ShrinkNormaliser).coerceIn(0f, 1f)
 
     Box(
-        modifier
+        if (pinned) modifier else modifier
             .fillMaxWidth()
             .statusBarsPadding()
             .padding(top = BannerExpandedTopPadding, start = 16.dp, end = 16.dp)

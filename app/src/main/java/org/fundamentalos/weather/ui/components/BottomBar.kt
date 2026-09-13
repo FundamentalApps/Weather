@@ -11,6 +11,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.layout.only
+import androidx.compose.foundation.layout.displayCutout
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -63,7 +68,12 @@ fun BottomBar(
     onSelectionChange: (Int) -> Unit,
     onMapClick: () -> Unit,
     onLocationListClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    /**
+     * Whether the place sits beside the map button rather than between the buttons: sideways,
+     * where the middle of the bar is under the cards.
+     */
+    placeBesideMap: Boolean = false,
 ) {
     val hazeStyle = weatherHazeStyle()
     val overlayColor = hazeStyle.tints.firstOrNull()?.color ?: Color.Transparent
@@ -92,6 +102,8 @@ fun BottomBar(
                     drawContent()
                 }
                 .navigationBarsPadding()
+                // The blur runs the full width, under a notch too; only the buttons keep clear of it.
+                .windowInsetsPadding(WindowInsets.displayCutout.only(WindowInsetsSides.Horizontal))
                 .height(80.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -107,7 +119,7 @@ fun BottomBar(
                 }
             }
 
-            Box(Modifier.weight(1f).fillMaxHeight(), Alignment.Center) {
+            val place: @Composable () -> Unit = {
                 GlassButton(
                     modifier = Modifier.height(48.dp),
                     shape = RoundedRectangle(16.dp),
@@ -132,6 +144,12 @@ fun BottomBar(
                         )
                     }
                 }
+            }
+            if (placeBesideMap) {
+                place()
+                Spacer(Modifier.weight(1f))
+            } else {
+                Box(Modifier.weight(1f).fillMaxHeight(), Alignment.Center) { place() }
             }
 
             GlassButton(

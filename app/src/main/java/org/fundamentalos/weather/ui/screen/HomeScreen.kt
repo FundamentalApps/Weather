@@ -1,13 +1,25 @@
 package org.fundamentalos.weather.ui.screen
 
+import android.content.res.Configuration
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.LocalContentColor
@@ -26,6 +38,7 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeSource
@@ -35,6 +48,7 @@ import org.fundamentalos.weather.ui.components.Banner
 import org.fundamentalos.weather.ui.components.BannerPinnedContentOffset
 import org.fundamentalos.weather.ui.components.BottomBar
 import org.fundamentalos.weather.ui.components.GlassLoadingIndicator
+import org.fundamentalos.weather.ui.components.IosOverscrollState
 import org.fundamentalos.weather.ui.components.LocalGlassBackdrop
 import org.fundamentalos.weather.ui.components.LocalScrollClipTop
 import org.fundamentalos.weather.ui.components.LocalUseDarkCards
@@ -52,10 +66,19 @@ import org.fundamentalos.weather.viewmodel.MainViewModel
 import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 
+/** How much of the width the sideways headline and chips take; the cards have the rest. */
+private const val LandscapeHeadlineShare = 0.42f
+
+/** Room the sideways cards keep above their first card, and below their last for the buttons. */
+private val LandscapeCardsHeadroom = 16.dp
+private val LandscapeCardsFootroom = 96.dp
+
 /**
- * The home page: the sky, the headline pinned over it, and the cards scrolling under a clipped
- * window, coloured for the reading on show. The reading and how it changes are in
- * [HomeReading.kt], the cards in [HomeCards.kt], the colours in [HomeTheme.kt].
+ * The home page: the sky, the headline over it, and the cards scrolling under a clipped window,
+ * coloured for the reading on show. Upright, the headline is pinned over the cards and shrinks
+ * as they scroll; sideways, the way Apple Weather lays it out, the headline and the quick-info
+ * chips stand still at the left and the other cards scroll at the right. The reading and how it
+ * changes are in [HomeReading.kt], the cards in [HomeCards.kt], the colours in [HomeTheme.kt].
  */
 @Composable
 fun HomeScreen(
@@ -64,8 +87,10 @@ fun HomeScreen(
     vm: MainViewModel = koinViewModel(),
     settings: AppSettings = koinInject(),
 ) {
-    val languageTag = LocalConfiguration.current.locales.toLanguageTags()
+    val configuration = LocalConfiguration.current
+    val languageTag = configuration.locales.toLanguageTags()
     LaunchedEffect(languageTag) { vm.refreshForLanguage(languageTag) }
+    val landscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
     val locations = vm.currentLocation.value?.let { listOf(LocationItem(it.name, it.cityId)) }
         ?: listOf(LocationItem(stringResource(vm.locationLabel), ""))
 
@@ -126,38 +151,80 @@ fun HomeScreen(
                         modifier = if (glassBackdrop != null) Modifier.glassBackdropSource(glassBackdrop) else Modifier,
                     )
 
-                    // Content slides up and is cut by this window instead of running under the
-                    // pinned headline, the way Apple Weather does it.
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .statusBarsPadding()
-                            .padding(top = BannerPinnedContentOffset, start = 16.dp, end = 16.dp)
-                            .onGloballyPositioned { scrollClipTop.floatValue = it.positionInWindow().y }
-                            .clipToBounds()
-                    ) {
-                        CompositionLocalProvider(LocalScrollClipTop provides scrollClipTop) {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    // iOS-style rubber band, before verticalScroll so this sits
-                                    // above it in the nested scroll chain.
-                                    .iosOverscroll(overscrollState)
-                                    .verticalScroll(
-                                        state = scrollState,
-                                        flingBehavior = rememberIosFlingBehavior(scrollState),
-                                    )
-                                    .padding(bottom = 106.dp)
-                                    .navigationBarsPadding()
-                                    .graphicsLayer {
-                                        val a = transition.contentAlpha.value
-                                        alpha = a
-                                        // Sinks a little as it fades, and rises back with the new reading.
-                                        translationY = (1f - a) * SwapDrop.toPx()
-                                    }
-                            ) {
-                                displayed?.let { HomeCards(it, transition.enter, vm.currentLocation.value) }
+                    // The cards fade down and back up around a change of reading, and sink a
+                    // little as they go; the chips pinned sideways go with them.
+                    val fading = Modifier.graphicsLayer {
+                        val a = transition.contentAlpha.value
+                        alpha = a
+                        translationY = (1f - a) * SwapDrop.toPx()
+                    }
+                    val cardsColumn: @Composable (headroom: Dp, footroom: Dp, quickInfo: Boolean) -> Unit =
+                        { headroom, footroom, quickInfo ->
+                            CompositionLocalProvider(LocalScrollClipTop provides scrollClipTop) {
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        // iOS-style rubber band, before verticalScroll so this sits
+                                        // above it in the nested scroll chain.
+                                        .iosOverscroll(overscrollState)
+                                        .verticalScroll(
+                                            state = scrollState,
+                                            flingBehavior = rememberIosFlingBehavior(scrollState),
+                                        )
+                                        .padding(bottom = footroom)
+                                        .navigationBarsPadding()
+                                        .then(fading)
+                                ) {
+                                    displayed?.let { HomeCards(it, transition.enter, vm.currentLocation.value, headroom, quickInfo) }
+                                }
                             }
+                        }
+
+                    if (landscape) {
+                        Row(
+                            Modifier
+                                .fillMaxSize()
+                                .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Top))
+                        ) {
+                            // The headline and the chips, pinned: nothing of them scrolls. Centred
+                            // in the room above the buttons, not the whole height, or they sit on
+                            // them.
+                            Column(
+                                Modifier
+                                    .fillMaxHeight()
+                                    .fillMaxWidth(LandscapeHeadlineShare)
+                                    .padding(start = 16.dp, end = 12.dp, bottom = LandscapeCardsFootroom),
+                                verticalArrangement = Arrangement.Center,
+                            ) {
+                                displayed?.let { content ->
+                                    Headline(content, rememberScrollState(), overscroll = null, enter = transition.entered, pinned = true)
+                                    Spacer(Modifier.height(24.dp))
+                                    Box(fading) { Entering(transition.enter, 0) { QuickInfoChips(content) } }
+                                }
+                            }
+                            // The cards, cut at the pane's top edge the way the upright window cuts them.
+                            Box(
+                                Modifier
+                                    .fillMaxSize()
+                                    .padding(end = 16.dp)
+                                    .onGloballyPositioned { scrollClipTop.floatValue = it.positionInWindow().y }
+                                    .clipToBounds()
+                            ) {
+                                cardsColumn(LandscapeCardsHeadroom, LandscapeCardsFootroom, false)
+                            }
+                        }
+                    } else {
+                        // Content slides up and is cut by this window instead of running under the
+                        // pinned headline, the way Apple Weather does it.
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .statusBarsPadding()
+                                .padding(top = BannerPinnedContentOffset, start = 16.dp, end = 16.dp)
+                                .onGloballyPositioned { scrollClipTop.floatValue = it.positionInWindow().y }
+                                .clipToBounds()
+                        ) {
+                            cardsColumn(PortraitCardsHeadroom, 106.dp, true)
                         }
                     }
                     // Stands in for the first reading, in the middle of the screen itself rather
@@ -177,14 +244,10 @@ fun HomeScreen(
                     }
                 }
 
-                displayed?.let { content ->
-                    Banner(
-                        temperature = content.weather.tempCelsius.toString(),
-                        text = conditionText(content.weather.condition.iconCode, content.weather.condition.text),
-                        scrollState = scrollState,
+                if (!landscape) displayed?.let { content ->
+                    Headline(
+                        content, scrollState, overscrollState, enter = transition.entered, pinned = false,
                         modifier = Modifier.align(Alignment.TopCenter).padding(start = 12.dp),
-                        overscroll = overscrollState,
-                        enter = transition.entered,
                     )
                 }
 
@@ -199,9 +262,32 @@ fun HomeScreen(
                         onSelectionChange = {},
                         onMapClick = onMapClick,
                         onLocationListClick = onLocationsClick,
+                        // Sideways the middle of the bar is under the cards; the place keeps to the map button.
+                        placeBesideMap = landscape,
                     )
                 }
             }
         }
     }
+}
+
+/** The reading's headline: the temperature and the condition, as [Banner] sets them. */
+@Composable
+private fun Headline(
+    content: HomeContent,
+    scrollState: ScrollState,
+    overscroll: IosOverscrollState?,
+    enter: Boolean,
+    pinned: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    Banner(
+        temperature = content.weather.tempCelsius.toString(),
+        text = conditionText(content.weather.condition.iconCode, content.weather.condition.text),
+        scrollState = scrollState,
+        modifier = modifier,
+        overscroll = overscroll,
+        enter = enter,
+        pinned = pinned,
+    )
 }

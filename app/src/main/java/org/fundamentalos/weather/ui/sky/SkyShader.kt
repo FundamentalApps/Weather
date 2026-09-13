@@ -24,7 +24,13 @@ layout(color) uniform half4 bottomColor;
 
 float sampleCloud(float2 p) { return density.eval(p * textureSize).r; }
 
+// The scene was tuned on a phone held upright, where the width is 0.448 of the height. Sideways,
+// or on a wider screen, the width covers proportionally more of the same cloud and star field
+// rather than stretching it: everything sized against x is sized against this instead.
+float widthInPortraitUnits(float x) { return x * (resolution.x / resolution.y) / 0.448; }
+
 float2 cloudCoordinates(float2 uv, float scale, float speed, float seed) {
+    uv.x = widthInPortraitUnits(uv.x);
     float2 puffy = float2(uv.x * 0.68, uv.y * 1.05) * scale;
     float2 wispy = float2(uv.x * 0.22, (uv.y + uv.x * 0.16) * 3.6) * scale;
     float form = max(cumulus, storm * 0.85);
@@ -186,8 +192,8 @@ half4 main(float2 coord) {
         smoothstep(0.018, 0.10, distance));
     sky = mix(sky, emissionColor, emission * solarVisibility);
     }
-    // Randomized cell positions avoid a visible star grid.
-    float2 grid = uv * float2(52.0, 110.0);
+    // Randomized cell positions avoid a visible star grid; the cells stay square sideways.
+    float2 grid = float2(widthInPortraitUnits(uv.x), uv.y) * float2(52.0, 110.0);
     float2 cell = floor(grid);
     float hash = fract(sin(dot(cell, float2(127.1, 311.7))) * 43758.5453);
     float hash2 = fract(hash * 135.78);

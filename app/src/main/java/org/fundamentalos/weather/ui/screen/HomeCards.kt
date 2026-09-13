@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
@@ -40,29 +41,31 @@ import kotlin.time.Clock
 /** The gap between one card and the next. */
 private val CardGap = 16.dp
 
+/** Room above the first card upright: what the headline takes, and a breath below it. */
+internal val PortraitCardsHeadroom = BannerScrollReserve + 28.dp
+
 /**
  * The page's cards for one reading, top to bottom, each brought up in its turn by [enter], and
- * the place named at the foot. Laid in a column the caller scrolls.
+ * the place named at the foot. Laid in a column the caller scrolls, starting [headroom] down.
  */
 @Composable
-internal fun HomeCards(content: HomeContent, enter: Animatable<Float, AnimationVector1D>, location: MainViewModel.Location?) {
+internal fun HomeCards(
+    content: HomeContent,
+    enter: Animatable<Float, AnimationVector1D>,
+    location: MainViewModel.Location?,
+    headroom: Dp = PortraitCardsHeadroom,
+    /** Whether the quick-info chips lead the column; sideways they are pinned beside the headline. */
+    quickInfo: Boolean = true,
+) {
     val weather = content.weather
     val today = content.today
     var order = 0
-    // The clip window already accounts for the pinned headline.
-    Spacer(Modifier.height(BannerScrollReserve))
-    Spacer(Modifier.height(28.dp))
+    Spacer(Modifier.height(headroom))
 
-    Entering(enter, order++) {
-        QuickInfoCard(
-            feelsLike = weather.feelsLikeCelsius.toString(),
-            maxTemp = content.daily.firstOrNull()?.tempMax?.toString() ?: "--",
-            minTemp = content.daily.firstOrNull()?.tempMin?.toString() ?: "--",
-            windDirection = windDirectionText(weather.windDegree, weather.windDirection),
-            windScale = weather.windScale,
-        )
+    if (quickInfo) {
+        Entering(enter, order++) { QuickInfoChips(content) }
+        Spacer(Modifier.height(CardGap))
     }
-    Spacer(Modifier.height(CardGap))
 
     if (content.warnings.isNotEmpty()) {
         Entering(enter, order++) { WeatherWarningsSection(content.warnings) }
@@ -121,6 +124,19 @@ internal fun HomeCards(content: HomeContent, enter: Animatable<Float, AnimationV
             )
         }
     }
+}
+
+/** The reading at a glance: today's range, the feel, the wind. */
+@Composable
+internal fun QuickInfoChips(content: HomeContent) {
+    val weather = content.weather
+    QuickInfoCard(
+        feelsLike = weather.feelsLikeCelsius.toString(),
+        maxTemp = content.daily.firstOrNull()?.tempMax?.toString() ?: "--",
+        minTemp = content.daily.firstOrNull()?.tempMin?.toString() ?: "--",
+        windDirection = windDirectionText(weather.windDegree, weather.windDirection),
+        windScale = weather.windScale,
+    )
 }
 
 /** The detail grid's tiles for a reading: what the day has, in the order it reads best. */
