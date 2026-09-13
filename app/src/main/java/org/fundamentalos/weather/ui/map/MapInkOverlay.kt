@@ -302,29 +302,21 @@ class MapInkOverlay(
         }
 
         /**
-         * The smallest city named at a zoom, by population. Districts and counties are cities
-         * too in the data, so a regional view would otherwise fill with them; they wait for
-         * the zoom at which a prefecture has room to show its parts.
+         * How important a label is at this zoom, or null if it is not shown here. In the region
+         * grain, countries, regions, capitals and cities of a million; in the city grain, every
+         * district and city, which is what the data calls them both.
          */
-        fun leastCityPopulation(zoom: Int): Double = when {
-            zoom <= 7 -> 1_000_000.0
-            zoom == 8 -> 500_000.0
-            zoom == 9 -> 200_000.0
-            else -> 0.0
-        }
-
-        /**
-         * How important a label is at this zoom, or null if it is not shown here: countries go
-         * once the map is close enough for their regions, and regions once cities fill the view.
-         */
-        fun priorityOf(label: InkLabel, zoom: Int): Int? = when {
-            label.adminLevel == 2 -> if (zoom in 2..7 && label.size >= leastCountryArea(zoom)) 100 else null
-            label.adminLevel == 4 -> if (zoom in 4..9) 85 else null
-            label.adminLevel != 0 -> null
-            label.kind == "capital" -> if (zoom >= 3) 95 else null
-            label.kind == "state_capital" -> if (zoom >= 4) 92 else null
-            label.kind == "city" -> if (zoom >= 4 && label.size >= leastCityPopulation(zoom)) 90 else null
-            else -> null
+        fun priorityOf(label: InkLabel, zoom: Int): Int? {
+            val city = zoom >= CityZoom
+            return when {
+                label.adminLevel == 2 -> if (!city && zoom >= 2 && label.size >= leastCountryArea(zoom)) 100 else null
+                label.adminLevel == 4 -> if (!city && zoom >= 4) 85 else null
+                label.adminLevel != 0 -> null
+                label.kind == "capital" -> if (zoom >= 3) 95 else null
+                label.kind == "state_capital" -> if (zoom >= 4) 92 else null
+                label.kind == "city" -> if (city || (zoom >= 4 && label.size >= BigCity)) 90 else null
+                else -> null
+            }
         }
 
         /** The name keys to try for a locale, most specific first, ending in the local name. */

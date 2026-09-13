@@ -33,13 +33,18 @@ const val MaxInkZoom = 14
 /** One OpenStreetMap vector tile. */
 data class InkTileKey(val zoom: Int, val x: Int, val y: Int)
 
+/**
+ * The map has two grains. Below [CityZoom] it is a region: coasts, borders, motorways from a
+ * provincial zoom, and the names of countries, regions and big cities. From it on it is a
+ * city: trunk roads and the names of districts join in. Nothing finer than a trunk road is
+ * ever drawn; a weather map is not for finding a street.
+ */
+const val CityZoom = 8
+
 /** The road classes worth drawing over a weather field, coarsest first. */
 enum class RoadClass(val minZoom: Int, val widthDp: Float) {
-    Minor(13, 0.5f),
-    Tertiary(11, 0.7f),
-    Secondary(10, 0.9f),
-    Primary(8, 1.2f),
-    Motorway(4, 1.6f),
+    Trunk(CityZoom, 1.2f),
+    Motorway(6, 1.6f),
 }
 
 /**
@@ -141,11 +146,8 @@ class InkTile(
                 for (feature in layer.features) {
                     if (feature.type != 2) continue
                     val roadClass = when (feature.tags["kind"]) {
-                        "motorway", "trunk" -> RoadClass.Motorway
-                        "primary" -> RoadClass.Primary
-                        "secondary" -> RoadClass.Secondary
-                        "tertiary" -> RoadClass.Tertiary
-                        "residential", "unclassified", "living_street", "pedestrian" -> RoadClass.Minor
+                        "motorway" -> RoadClass.Motorway
+                        "trunk" -> RoadClass.Trunk
                         else -> continue
                     }
                     val path = roads.getOrPut(roadClass) { Path() }
