@@ -19,7 +19,6 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
-import androidx.core.view.WindowCompat
 import com.google.android.material.color.MaterialColors
 import dev.chrisbanes.haze.HazeStyle
 import dev.chrisbanes.haze.HazeTint
@@ -593,7 +592,10 @@ fun WeatherTheme(
     SideEffect {
         val window = (view.context as Activity).window
         window.navigationBarColor = Color.Transparent.toArgb() // Make MIUI happy ig
-        WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
+        // The bar icons are not set here: each screen's StatusBarAppearance decides them from the
+        // sky behind the bars, not the system theme. enableEdgeToEdge() already sets a sensible
+        // default once per Activity. Setting them here too would fight StatusBarAppearance and win
+        // on a later recomposition (e.g. after a rotation), leaving the icons mismatched to the sky.
     }
 
     MaterialTheme(
