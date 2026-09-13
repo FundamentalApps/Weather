@@ -235,7 +235,7 @@ private fun ShaderSky(blend: () -> SkyBlend, bitmap: android.graphics.Bitmap, qu
             // where its place is undefined below the horizon.
             fun draw(s: SkyState, shader: RuntimeShader, brush: ShaderBrush, alpha: Float) {
                 val light = skyLight(s)
-                val palette = skyPalette(s, light.day, light.dusk)
+                val palette = skyPalette(s, light.day)
                 shader.setFloatUniform("resolution", size.width, size.height)
                 shader.setFloatUniform("time", now)
                 shader.setFloatUniform("daylight", light.day)
@@ -297,7 +297,7 @@ private fun CompatSky(sky: () -> SkyState, bitmap: ImageBitmap, quality: SkyQual
         // Read the scene in the draw phase so the cross-fade redraws without recomposing.
         val s = sky()
         val light = skyLight(s)
-        val palette = skyPalette(s, light.day, light.dusk)
+        val palette = skyPalette(s, light.day)
         drawRect(Brush.verticalGradient(palette))
         val sun = Offset(light.sun.x * size.width, light.sun.y * size.height)
         val cloudOcclusion = ((s.cloudCover - .28f) / .34f).coerceIn(0f, 1f)
@@ -379,17 +379,25 @@ private fun DrawScope.drawPrecipitation(sky: SkyState, time: Float, budget: Int)
     }
 }
 
-private fun skyPalette(sky: SkyState, day: Float, dusk: Float): List<Color> {
+private fun skyPalette(sky: SkyState, day: Float): List<Color> {
     val night = listOf(Color(0xFF050319), Color(0xFF22243F), Color(0xFF304660))
     val clear = listOf(Color(0xFF396A96), Color(0xFF4B83B6), Color(0xFF70A5D6))
     val cloudy = listOf(Color(0xFFB5C7DA), Color(0xFFA3B4C5), Color(0xFF90A2B4))
     val rainy = listOf(Color(0xFF586E80), Color(0xFF354C5D), Color(0xFF2D4151))
+    // The belt of Venus at dawn and dusk: an indigo crown fading to a warm rose horizon. It runs
+    // the whole colourful stretch either side of the horizon -- from the pink of civil twilight,
+    // strongest just below the horizon, through golden hour as the sun climbs -- so it lingers a
+    // good while before sunrise and after sunset, not just for the minute the sun is on the line.
+    val twilight = listOf(Color(0xFF2E2C57), Color(0xFF6F5A84), Color(0xFFBE857C))
     val overcast = ((sky.cloudCover - 0.42f) / 0.20f).coerceIn(0f, 1f) * (1f - sky.cumulus) * (1f - sky.precipitation)
     val wet = (sky.precipitation * 1.4f).coerceIn(0f, 1f)
+    // Centred a touch below the horizon and wide enough to hold from about -10 deg to +6 deg of sun.
+    // Only a clear or broken sky glows; an overcast lid or rain washes it grey.
+    val glow = (exp(-((sky.sunAltitude + 2f) / 8f).pow(2)) * (1f - overcast) * (1f - wet)).coerceIn(0f, 1f)
     return List(3) { index ->
         val base = lerp(lerp(clear[index], cloudy[index], overcast), rainy[index], wet)
         val solar = lerp(night[index], base, day)
-        lerp(solar, listOf(Color(0xFF444057), Color(0xFF805A69), Color(0xFFB17C74))[index], dusk * 0.50f)
+        lerp(solar, twilight[index], glow * 0.85f)
     }
 }
 
