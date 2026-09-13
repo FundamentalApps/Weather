@@ -17,7 +17,7 @@ import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.Modifier
 import dev.chrisbanes.haze.HazeState
-import org.fundamentalos.weather.ui.componets.LocationProvider
+import org.fundamentalos.weather.ui.components.LocationProvider
 import org.fundamentalos.weather.ui.screen.AboutScreen
 import org.fundamentalos.weather.ui.screen.DataSourcesScreen
 import org.fundamentalos.weather.ui.screen.HomeScreen

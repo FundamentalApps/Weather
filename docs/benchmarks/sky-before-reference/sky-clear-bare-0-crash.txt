@@ -145,7 +145,7 @@
 09-11 23:14:38.514 30168 30168 E AndroidRuntime: 	at android.view.PixelCopy.sourceForWindow(PixelCopy.java:296)
 09-11 23:14:38.514 30168 30168 E AndroidRuntime: 	at android.view.PixelCopy.request(PixelCopy.java:261)
 09-11 23:14:38.514 30168 30168 E AndroidRuntime: 	at android.view.PixelCopy.request(PixelCopy.java:225)
-09-11 23:14:38.514 30168 30168 E AndroidRuntime: 	at org.fundamentalos.weather.ui.componets.GlassMaterialKt$$ExternalSyntheticApiModelOutline0.m(D8$$SyntheticClass:0)
+09-11 23:14:38.514 30168 30168 E AndroidRuntime: 	at org.fundamentalos.weather.ui.components.GlassMaterialKt$$ExternalSyntheticApiModelOutline0.m(D8$$SyntheticClass:0)
 09-11 23:14:38.514 30168 30168 E AndroidRuntime: 	at org.fundamentalos.weather.benchmark.SkyBenchmarkActivity.capture(SkyBenchmarkActivity.kt:138)
 09-11 23:14:38.514 30168 30168 E AndroidRuntime: 	at org.fundamentalos.weather.benchmark.SkyBenchmarkActivity.access$capture(SkyBenchmarkActivity.kt:44)
 09-11 23:14:38.514 30168 30168 E AndroidRuntime: 	at org.fundamentalos.weather.benchmark.SkyBenchmarkActivity$onCreate$3.invokeSuspend(SkyBenchmarkActivity.kt:91)

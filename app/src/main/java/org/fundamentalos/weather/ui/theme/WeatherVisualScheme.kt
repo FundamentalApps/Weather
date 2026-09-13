@@ -2,7 +2,7 @@ package org.fundamentalos.weather.ui.theme
 
 import androidx.compose.runtime.Immutable
 import org.fundamentalos.weather.ui.sky.SkyState
-import org.fundamentalos.weather.ui.componets.moonIlluminationFraction
+import org.fundamentalos.weather.ui.components.moonIlluminationFraction
 import androidx.compose.ui.graphics.Color
 import org.fundamentalos.weather.weather.domain.CurrentWeather
 import org.fundamentalos.weather.weather.domain.DailyForecast

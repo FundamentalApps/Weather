@@ -11,11 +11,11 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import org.fundamentalos.weather.settings.AppSettings
-import org.fundamentalos.weather.ui.componets.PreferenceGroup
-import org.fundamentalos.weather.ui.componets.PreferenceLabels
-import org.fundamentalos.weather.ui.componets.PreferenceRow
-import org.fundamentalos.weather.ui.componets.PreferenceScreen
-import org.fundamentalos.weather.ui.componets.PreferenceSectionHeader
+import org.fundamentalos.weather.ui.components.PreferenceGroup
+import org.fundamentalos.weather.ui.components.PreferenceLabels
+import org.fundamentalos.weather.ui.components.PreferenceRow
+import org.fundamentalos.weather.ui.components.PreferenceScreen
+import org.fundamentalos.weather.ui.components.PreferenceSectionHeader
 import org.fundamentalos.weather.ui.theme.PreviewThemeWithBg
 import org.koin.compose.koinInject
 

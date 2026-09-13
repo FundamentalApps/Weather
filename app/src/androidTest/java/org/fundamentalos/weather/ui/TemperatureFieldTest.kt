@@ -3,7 +3,7 @@ package org.fundamentalos.weather.ui
 import android.graphics.Bitmap
 import android.graphics.Color
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import org.fundamentalos.weather.ui.componets.TemperatureField
+import org.fundamentalos.weather.ui.components.TemperatureField
 import org.fundamentalos.weather.weather.provider.fos.FosMapLegendStop
 import org.junit.Assert.*
 import org.junit.Test

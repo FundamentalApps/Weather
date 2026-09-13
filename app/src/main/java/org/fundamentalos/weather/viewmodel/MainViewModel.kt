@@ -8,10 +8,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.Snapshot
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import org.fundamentalos.weather.ui.componets.DailyWeatherInfo
-import org.fundamentalos.weather.ui.componets.HourlyWeatherInfo
-import org.fundamentalos.weather.ui.componets.MultilayerIcon
-import org.fundamentalos.weather.ui.componets.WeatherIcons
+import org.fundamentalos.weather.ui.components.DailyWeatherInfo
+import org.fundamentalos.weather.ui.components.HourlyWeatherInfo
+import org.fundamentalos.weather.ui.components.MultilayerIcon
+import org.fundamentalos.weather.ui.components.WeatherIcons
 import org.fundamentalos.weather.weather.domain.AirQuality
 import org.fundamentalos.weather.weather.domain.CurrentWeather
 import org.fundamentalos.weather.weather.domain.DailyForecast

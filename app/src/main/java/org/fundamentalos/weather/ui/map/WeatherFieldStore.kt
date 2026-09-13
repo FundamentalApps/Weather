@@ -20,7 +20,7 @@ import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 import org.fundamentalos.weather.BuildConfig
-import org.fundamentalos.weather.ui.componets.TemperatureField
+import org.fundamentalos.weather.ui.components.TemperatureField
 import org.fundamentalos.weather.weather.provider.fos.FosMapLayer
 import kotlin.math.atan
 import kotlin.math.cos
