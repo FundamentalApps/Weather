@@ -13,7 +13,7 @@ import android.os.Build
 import android.os.PowerManager
 import android.provider.Settings
 import androidx.annotation.RequiresApi
-import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.animate
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
@@ -108,16 +108,29 @@ private fun rememberSkyTime(running: Boolean): State<Float> {
 /** How long one sky takes to become another. */
 private const val SkyCrossfadeMillis = 3500
 
-@Composable
-private fun smoothSky(target: SkyState, animate: Boolean): State<SkyState> = produceState(target, target, animate) {
-    if (!animate) { value = target; return@produceState }
-    val start = value
-    // Eased at both ends, and seen to be: SkyState.interpolate mixes the sun's height in the
-    // sky's own terms, so a night-to-day change is not a moment's flip in the middle of this.
-    if (start != target) animate(0f, 1f, animationSpec = tween(SkyCrossfadeMillis, easing = FastOutSlowInEasing)) { fraction, _ ->
-        value = start.interpolate(target, fraction)
-    }
+/** Quick to set off and long to settle, the way a dawn is. */
+private val SkyCrossfadeEasing = CubicBezierEasing(0.4f, 0.2f, 0f, 1f)
+
+/**
+ * A sky part way from one to another: both, and how far along. The renderer draws each and
+ * blends them, so what is seen changes exactly as [fraction] does — mixing the states instead
+ * and drawing the one between would not: night turns to day over a narrow band of sun heights,
+ * and a change that crosses the band would sit still, then flip, then sit still again.
+ */
+private class SkyBlend(val from: SkyState, val to: SkyState, val fraction: Float) {
+    /** The state between the two, for what is drawn from one state: the sun's place, the rain. */
+    val between: SkyState get() = if (fraction >= 1f) to else from.interpolate(to, fraction)
 }
+
+@Composable
+private fun smoothSky(target: SkyState, animate: Boolean): State<SkyBlend> =
+    produceState(SkyBlend(target, target, 1f), target, animate) {
+        if (!animate) { value = SkyBlend(target, target, 1f); return@produceState }
+        val start = value.between
+        if (start != target) animate(0f, 1f, animationSpec = tween(SkyCrossfadeMillis, easing = SkyCrossfadeEasing)) { fraction, _ ->
+            value = SkyBlend(start, target, fraction)
+        }
+    }
 
 @Composable
 fun WeatherSkyBackground(
@@ -154,13 +167,13 @@ fun WeatherSkyBackground(
         if (Build.VERSION.SDK_INT >= 33 && !forceCompat) {
             ShaderSky({ sceneState.value }, bitmap, quality, { timeOverride ?: time.value })
         } else {
-            CompatSky({ sceneState.value }, bitmap.asImageBitmap(), quality, { timeOverride ?: time.value })
+            CompatSky({ sceneState.value.between }, bitmap.asImageBitmap(), quality, { timeOverride ?: time.value })
         }
         // Rain needs fine lines: keep particles full-resolution over the low-resolution sky. The
         // layer is always present; whether it paints is decided in the draw phase, so precipitation
         // rising or falling during the cross-fade never restructures the composition.
         Canvas(Modifier.fillMaxSize()) {
-            val scene = sceneState.value
+            val scene = sceneState.value.between
             if (scene.precipitation > 0.01f) {
                 val t = timeOverride ?: time.value
                 drawPrecipitation(scene, t, quality.particles)
@@ -172,17 +185,20 @@ fun WeatherSkyBackground(
 
 @RequiresApi(33)
 @Composable
-private fun ShaderSky(sky: () -> SkyState, bitmap: android.graphics.Bitmap, quality: SkyQuality, time: () -> Float) {
-    val shader = remember(bitmap) {
-        RuntimeShader(SKY_SHADER).apply {
-            // Mirroring prevents any generated edge mismatch from producing a discontinuity.
-            setInputShader("density", BitmapShader(bitmap, Shader.TileMode.MIRROR, Shader.TileMode.MIRROR).apply {
-                setFilterMode(BitmapShader.FILTER_MODE_LINEAR)
-            })
-            setFloatUniform("textureSize", bitmap.width.toFloat(), bitmap.height.toFloat())
-        }
+private fun ShaderSky(blend: () -> SkyBlend, bitmap: android.graphics.Bitmap, quality: SkyQuality, time: () -> Float) {
+    fun skyShader() = RuntimeShader(SKY_SHADER).apply {
+        // Mirroring prevents any generated edge mismatch from producing a discontinuity.
+        setInputShader("density", BitmapShader(bitmap, Shader.TileMode.MIRROR, Shader.TileMode.MIRROR).apply {
+            setFilterMode(BitmapShader.FILTER_MODE_LINEAR)
+        })
+        setFloatUniform("textureSize", bitmap.width.toFloat(), bitmap.height.toFloat())
     }
-    val brush = remember(shader) { ShaderBrush(shader) }
+    // One shader for the sky being left and one for the sky arriving: each draw takes the
+    // uniforms it is recorded with, and a blend draws both in one frame.
+    val fromShader = remember(bitmap) { skyShader() }
+    val toShader = remember(bitmap) { skyShader() }
+    val fromBrush = remember(fromShader) { ShaderBrush(fromShader) }
+    val toBrush = remember(toShader) { ShaderBrush(toShader) }
     BoxWithConstraints(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Canvas(Modifier.size(maxWidth / quality.downscale, maxHeight / quality.downscale).graphicsLayer {
             compositingStrategy = CompositingStrategy.Offscreen
@@ -191,27 +207,39 @@ private fun ShaderSky(sky: () -> SkyState, bitmap: android.graphics.Bitmap, qual
         }) {
             // Read the scene here, in the draw phase: the cross-fade advances it every frame, and
             // the light/palette it feeds are cheap enough to recompute per draw.
-            val s = sky()
-            val light = skyLight(s)
-            val palette = skyPalette(s, light.day, light.dusk)
-            shader.setFloatUniform("resolution", size.width, size.height)
-            shader.setFloatUniform("time", time())
-            shader.setFloatUniform("daylight", light.day)
-            shader.setFloatUniform("dusk", light.dusk)
-            shader.setFloatUniform("sun", light.sun.x, light.sun.y)
-            shader.setColorUniform("topColor", palette[0].toArgb())
-            shader.setColorUniform("middleColor", palette[1].toArgb())
-            shader.setColorUniform("bottomColor", palette[2].toArgb())
-            shader.setFloatUniform("cumulus", s.cumulus)
-            shader.setFloatUniform("storm", s.storm)
-            shader.setFloatUniform("cover", s.cloudCover)
-            shader.setFloatUniform("precip", s.precipitation)
-            shader.setFloatUniform("haze", s.haze)
-            shader.setFloatUniform("dust", s.dust)
-            shader.setFloatUniform("wind", s.windX, s.windY)
-            shader.setFloatUniform("moon", s.moonIllumination)
-            shader.setFloatUniform("layers", quality.cloudLayers.toFloat())
-            drawRect(brush)
+            val b = blend()
+            val now = time()
+            // Each sky keeps its own sun where it is: one fades as the other comes, and a sun
+            // sent along the way between them would be seen crossing the sky, and jumping
+            // where its place is undefined below the horizon.
+            fun draw(s: SkyState, shader: RuntimeShader, brush: ShaderBrush, alpha: Float) {
+                val light = skyLight(s)
+                val palette = skyPalette(s, light.day, light.dusk)
+                shader.setFloatUniform("resolution", size.width, size.height)
+                shader.setFloatUniform("time", now)
+                shader.setFloatUniform("daylight", light.day)
+                shader.setFloatUniform("dusk", light.dusk)
+                shader.setFloatUniform("sun", light.sun.x, light.sun.y)
+                shader.setColorUniform("topColor", palette[0].toArgb())
+                shader.setColorUniform("middleColor", palette[1].toArgb())
+                shader.setColorUniform("bottomColor", palette[2].toArgb())
+                shader.setFloatUniform("cumulus", s.cumulus)
+                shader.setFloatUniform("storm", s.storm)
+                shader.setFloatUniform("cover", s.cloudCover)
+                shader.setFloatUniform("precip", s.precipitation)
+                shader.setFloatUniform("haze", s.haze)
+                shader.setFloatUniform("dust", s.dust)
+                shader.setFloatUniform("wind", s.windX, s.windY)
+                shader.setFloatUniform("moon", s.moonIllumination)
+                shader.setFloatUniform("layers", quality.cloudLayers.toFloat())
+                drawRect(brush, alpha = alpha)
+            }
+            if (b.fraction >= 1f) {
+                draw(b.to, toShader, toBrush, 1f)
+            } else {
+                draw(b.from, fromShader, fromBrush, 1f)
+                draw(b.to, toShader, toBrush, b.fraction)
+            }
         }
     }
 }

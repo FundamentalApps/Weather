@@ -142,9 +142,8 @@ fun HomeScreen(
     vm.currentLocation.value?.let { place[0] = it.latitude; place[1] = it.longitude }
     val incoming = homeContent(vm, place)
     var displayed by remember { mutableStateOf(incoming) }
-    // The sky is given the new reading as the change begins, a step ahead of the cards: its
-    // turn from one sky to another shows mostly in the middle of its cross-fade, which then
-    // lands as the cards come back up in their new colours, rather than a moment after.
+    // The sky is given the new reading as the cards come back up with it, after the long frame
+    // that composes them, so its cross-fade sets off with them and is not frozen by it.
     var skyShown by remember { mutableStateOf(incoming) }
     var entered by remember { mutableStateOf(false) }
     val contentAlpha = remember { Animatable(1f) }
@@ -160,25 +159,26 @@ fun HomeScreen(
             val shown = displayed
             when {
                 shown == null -> {
-                    skyShown = next
                     indicatorAlpha.animateTo(0f, tween(IndicatorLeaveMillis, easing = FastOutLinearInEasing))
                     entered = true
                     displayed = next
                     // The frame that first composes and draws the cards is a long one; the
-                    // entrance starts after it, on the same frame as the headline's roll,
-                    // and gives the headline a moment's lead.
+                    // entrance starts after it, on the same frame as the headline's roll and
+                    // the sky's change, and gives the headline a moment's lead.
                     withFrameNanos { }
                     withFrameNanos { }
+                    skyShown = next
                     enter.animateTo(1f, tween(EnterMillis, delayMillis = EnterLeadMillis, easing = LinearEasing))
                 }
                 shown != next -> {
-                    skyShown = next
                     contentAlpha.animateTo(0f, tween(SwapOutMillis, easing = FastOutLinearInEasing))
                     displayed = next
                     // The frame that composes the new reading's cards is a long one; the fade
-                    // back up starts after it, whole, rather than losing its first third to it.
+                    // back up and the sky's change start after it, whole, rather than losing
+                    // their first moments to it.
                     withFrameNanos { }
                     withFrameNanos { }
+                    skyShown = next
                     contentAlpha.animateTo(1f, tween(SwapInMillis, easing = FastOutSlowInEasing))
                 }
             }
