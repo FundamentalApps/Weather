@@ -434,10 +434,11 @@ private fun LegendCard(
                     .width(8.dp)
                     .fillMaxHeight()
                     .clip(RoundedRectangle(4.dp))
-                    // The gradient's stops sit where their degrees do, top being hot.
+                    // The gradient's stops sit where their degrees do, top being hot; a gradient
+                    // wants its stops from the top down, so the palette is read hot to cold.
                     .background(
                         Brush.verticalGradient(
-                            *palette.map { (degrees, color) -> (1f - fraction(degrees)) to color }.toTypedArray()
+                            *palette.asReversed().map { (degrees, color) -> (1f - fraction(degrees)) to color }.toTypedArray()
                         )
                     ),
             )
