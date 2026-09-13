@@ -1,6 +1,8 @@
 package org.fundamentalos.weather.ui.screen
 
 import android.content.res.Configuration
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
@@ -72,6 +74,9 @@ private const val LandscapeHeadlineShare = 0.42f
 /** Room the sideways cards keep above their first card, and below their last for the buttons. */
 private val LandscapeCardsHeadroom = 16.dp
 private val LandscapeCardsFootroom = 96.dp
+
+/** How long the bar's colours take to reach a new reading's: the cards' fade back up. */
+private const val BarColorMillis = 380
 
 /**
  * The home page: the sky, the headline over it, and the cards scrolling under a clipped window,
@@ -254,7 +259,17 @@ fun HomeScreen(
                     )
                 }
 
-                CompositionLocalProvider(LocalHazeState provides hazeState) {
+                // The bar cannot fade down and back up as the cards do, so its colours move to
+                // the new reading's over the same time as the cards come back up in theirs.
+                val barSurface by animateColorAsState(contentColorScheme.surface, tween(BarColorMillis), label = "barSurface")
+                val barOnSurface by animateColorAsState(contentColorScheme.onSurface, tween(BarColorMillis), label = "barOnSurface")
+                val barOutline by animateColorAsState(contentColorScheme.outlineVariant, tween(BarColorMillis), label = "barOutline")
+                val barTint by animateColorAsState(contentColorScheme.surfaceTint, tween(BarColorMillis), label = "barTint")
+                val barScheme = contentColorScheme.copy(
+                    surface = barSurface, onSurface = barOnSurface, outlineVariant = barOutline, surfaceTint = barTint,
+                )
+                CompositionLocalProvider(LocalHazeState provides hazeState, LocalContentColor provides barOnSurface) {
+                    MaterialTheme(colorScheme = barScheme, typography = MaterialTheme.typography) {
                     BottomBar(
                         modifier = Modifier
                             .align(Alignment.BottomCenter)
@@ -268,6 +283,7 @@ fun HomeScreen(
                         // Sideways the middle of the bar is under the cards; the place keeps to the map button.
                         placeBesideMap = landscape,
                     )
+                    }
                 }
             }
         }

@@ -14,8 +14,6 @@ import android.os.PowerManager
 import android.provider.Settings
 import androidx.annotation.RequiresApi
 import androidx.compose.animation.core.CubicBezierEasing
-import androidx.compose.animation.core.animate
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -130,13 +128,28 @@ private class SkyBlend(val from: SkyState, val to: SkyState, val fraction: Float
     val between: SkyState get() = if (fraction >= 1f) to else from.interpolate(to, fraction)
 }
 
+/** The sky is drawn on this step; the blend keeps to it rather than to every display frame. */
+private const val SkyStepNanos = 33_000_000L
+
 @Composable
 private fun smoothSky(target: SkyState, animate: Boolean): State<SkyBlend> =
     produceState(SkyBlend(target, target, 1f), target, animate) {
         if (!animate) { value = SkyBlend(target, target, 1f); return@produceState }
         val start = value.between
-        if (start != target) animate(0f, 1f, animationSpec = tween(SkyCrossfadeMillis, easing = SkyCrossfadeEasing)) { fraction, _ ->
-            value = SkyBlend(start, target, fraction)
+        if (start == target) return@produceState
+        // Stepped by hand rather than by animate(): that writes every display frame, and at a
+        // hundred and twenty a second with two skies to draw each time the change stuttered.
+        val startNanos = withFrameNanos { it }
+        // Due at the first frame: not Long.MIN_VALUE, whose difference from now overflows.
+        var shown = startNanos - SkyStepNanos
+        while (true) {
+            val now = withFrameNanos { it }
+            val t = ((now - startNanos) / 1_000_000f / SkyCrossfadeMillis).coerceIn(0f, 1f)
+            if (t >= 1f || now - shown >= SkyStepNanos) {
+                value = SkyBlend(start, target, SkyCrossfadeEasing.transform(t))
+                shown = now
+            }
+            if (t >= 1f) break
         }
     }
 
@@ -202,12 +215,11 @@ private fun ShaderSky(blend: () -> SkyBlend, bitmap: android.graphics.Bitmap, qu
         })
         setFloatUniform("textureSize", bitmap.width.toFloat(), bitmap.height.toFloat())
     }
-    // One shader for the sky being left and one for the sky arriving: each draw takes the
-    // uniforms it is recorded with, and a blend draws both in one frame.
-    val fromShader = remember(bitmap) { skyShader() }
-    val toShader = remember(bitmap) { skyShader() }
-    val fromBrush = remember(fromShader) { ShaderBrush(fromShader) }
-    val toBrush = remember(toShader) { ShaderBrush(toShader) }
+    // One shader serves both skies of a blend: each draw takes the uniforms set before it, so
+    // the two draws of a frame each get their own; a second instance would have its program
+    // compiled on the first blend, a stutter right where it shows most.
+    val shader = remember(bitmap) { skyShader() }
+    val brush = remember(shader) { ShaderBrush(shader) }
     BoxWithConstraints(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Canvas(Modifier.size(maxWidth / quality.downscale, maxHeight / quality.downscale).graphicsLayer {
             compositingStrategy = CompositingStrategy.Offscreen
@@ -244,10 +256,10 @@ private fun ShaderSky(blend: () -> SkyBlend, bitmap: android.graphics.Bitmap, qu
                 drawRect(brush, alpha = alpha)
             }
             if (b.fraction >= 1f) {
-                draw(b.to, toShader, toBrush, 1f)
+                draw(b.to, shader, brush, 1f)
             } else {
-                draw(b.from, fromShader, fromBrush, 1f)
-                draw(b.to, toShader, toBrush, b.fraction)
+                draw(b.from, shader, brush, 1f)
+                draw(b.to, shader, brush, b.fraction)
             }
         }
     }
