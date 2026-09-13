@@ -1,0 +1,14 @@
+Fundamental Weather is a native Android weather client. It shows current conditions, an hourly and multi-day forecast, minute-by-minute precipitation, air quality and weather warnings, under a sky that is drawn and animated for the weather and the time of day.
+
+Features:
+
+* Current conditions with an hourly and daily forecast on one screen
+* Minute-by-minute precipitation for the hour ahead
+* Air quality with a pollutant breakdown
+* A weather map with a smooth temperature field, precipitation radar and a hand-drawn base map rendered from OpenStreetMap vector tiles
+* A living sky and glass surfaces that follow the conditions
+* Upright and landscape layouts
+
+Weather data is served by the FundamentalOS backend, which aggregates free sources: forecasts and air quality from Open-Meteo, place names from GeoNames, and optional IP-based location from DB-IP Lite. The backend is free software and can be self-hosted.
+
+No accounts, no ads, no tracking.
