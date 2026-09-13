@@ -13,8 +13,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -33,8 +31,6 @@ import org.fundamentalos.weather.ui.theme.harmonized
 import org.fundamentalos.weather.weather.domain.WarningSeverity
 import org.fundamentalos.weather.weather.domain.WeatherWarning
 import kotlinx.datetime.Instant
-import kotlinx.datetime.TimeZone
-import kotlinx.datetime.toLocalDateTime
 import kotlin.time.Clock
 
 @Composable

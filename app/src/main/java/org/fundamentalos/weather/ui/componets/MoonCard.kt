@@ -4,7 +4,6 @@ import org.fundamentalos.weather.ui.text.localizedDays
 import org.fundamentalos.weather.ui.text.localizedFractionalDays
 import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -19,14 +18,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.BlendMode
-import androidx.compose.ui.graphics.compositeOver
-import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.imageResource
 import androidx.compose.ui.tooling.preview.Preview
@@ -35,9 +31,7 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.IntOffset
 import org.fundamentalos.weather.R
 import org.fundamentalos.weather.ui.theme.PreviewThemeWithBg
-import org.fundamentalos.weather.ui.theme.harmonized
 import org.fundamentalos.weather.ui.theme.moon
-import org.fundamentalos.weather.ui.theme.moonDark
 import kotlinx.datetime.LocalDate
 import kotlin.math.abs
 import kotlin.math.roundToInt

@@ -1,13 +1,11 @@
 package org.fundamentalos.weather.ui.componets
 
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.fastForEach
 import org.fundamentalos.weather.ui.componets.MultilayerIcon.ColorTag
 import org.fundamentalos.weather.ui.theme.cloud

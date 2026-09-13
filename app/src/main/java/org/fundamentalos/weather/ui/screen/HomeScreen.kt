@@ -6,9 +6,7 @@ import org.fundamentalos.weather.ui.text.localizedClock
 import org.fundamentalos.weather.ui.text.localizedNumber
 import androidx.compose.ui.res.stringResource
 import android.os.Build
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.FastOutLinearInEasing
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
@@ -25,8 +23,6 @@ import org.fundamentalos.weather.weather.domain.CurrentWeather
 import org.fundamentalos.weather.weather.domain.DailyForecast
 import org.fundamentalos.weather.weather.domain.MinutelyPrecipitation
 import org.fundamentalos.weather.weather.domain.WeatherWarning
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -61,15 +57,12 @@ import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInWindow
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.luminance
-import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeSource

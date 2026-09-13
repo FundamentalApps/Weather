@@ -26,7 +26,6 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.lifecycleScope
 import org.fundamentalos.weather.ui.LocalScreenCovered
 import org.fundamentalos.weather.ui.componets.*
-import org.fundamentalos.weather.ui.sky.SkyState
 import org.fundamentalos.weather.ui.sky.WeatherSkyBackground
 import org.fundamentalos.weather.ui.sky.SkyQuality
 import org.fundamentalos.weather.ui.theme.WeatherTheme

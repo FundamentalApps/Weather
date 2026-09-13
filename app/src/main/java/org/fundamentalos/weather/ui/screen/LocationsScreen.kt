@@ -4,7 +4,6 @@ import org.fundamentalos.weather.R
 import androidx.compose.ui.res.stringResource
 import androidx.activity.compose.PredictiveBackHandler
 import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.EaseInOut
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -22,7 +21,6 @@ import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
@@ -49,8 +47,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -66,7 +62,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -80,16 +75,10 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.lerp
 import com.kyant.shapes.RoundedRectangle
-import dev.chrisbanes.haze.HazeInputScale
-import dev.chrisbanes.haze.HazeProgressive
 import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.hazeSource
-import org.fundamentalos.weather.ui.theme.WeatherHazeStyle
-import org.fundamentalos.weather.ui.componets.AppBarHeight
 import org.fundamentalos.weather.ui.componets.CollapsingLargeTitle
 import org.fundamentalos.weather.ui.componets.CollapsingTitle
-import org.fundamentalos.weather.ui.componets.collapsingTitleAnchor
 import org.fundamentalos.weather.ui.componets.rememberCollapsingTitle
 import org.fundamentalos.weather.ui.componets.AppBarIconAlignmentPad
 import org.fundamentalos.weather.ui.componets.BlurOnlyHazeStyle
