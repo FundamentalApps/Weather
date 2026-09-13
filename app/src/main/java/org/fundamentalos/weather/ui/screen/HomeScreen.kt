@@ -18,7 +18,7 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.withFrameNanos
 import org.fundamentalos.weather.ui.componets.DailyWeatherInfo
-import org.fundamentalos.weather.ui.componets.FlowerLoadingIndicator
+import org.fundamentalos.weather.ui.componets.GlassLoadingIndicator
 import org.fundamentalos.weather.ui.componets.HourlyWeatherInfo
 import org.fundamentalos.weather.weather.domain.AirQuality
 import org.fundamentalos.weather.weather.domain.CurrentWeather
@@ -136,8 +136,8 @@ fun HomeScreen(
 
     // The page shows one reading at a time and changes it as a whole: the cards fade down, the
     // reading changes underneath, and they fade back up showing the new one, while the headline
-    // rolls to its new figures. The first reading arrives differently: the flower that stood in
-    // for it goes, and the headline and the cards come up, one after another.
+    // rolls to its new figures. The first reading arrives differently: the indicator that stood
+    // in for it goes, and the headline and the cards come up, one after another.
     val incoming = homeContent(vm)
     var displayed by remember { mutableStateOf(incoming) }
     var entered by remember { mutableStateOf(false) }
@@ -182,9 +182,11 @@ fun HomeScreen(
 
 
             val skyWallTime by rememberSkyWallTime()
+            // Coloured for the reading on show, not the newest one: the colours change with
+            // the cards, at the bottom of their fade, and not a moment before.
             val visualScheme = weatherVisualScheme(
-                current = vm.weather.value,
-                dailyForecast = vm.dailyForecast.value,
+                current = displayed?.weather,
+                dailyForecast = displayed?.forecast ?: emptyList(),
                 // Before the weather is known, the device's own place puts the sun where it is.
                 latitude = (vm.currentLocation.value ?: vm.deviceLocation.value)?.latitude,
                 longitude = (vm.currentLocation.value ?: vm.deviceLocation.value)?.longitude,
@@ -490,7 +492,7 @@ fun HomeScreen(
                         // Stands in for the first reading, where the cards will be, and goes as
                         // they come; a failed request leaves nothing turning for nothing.
                         if (displayed == null && vm.weatherStatus.value != MainViewModel.WeatherStatus.Error) {
-                            FlowerLoadingIndicator(
+                            GlassLoadingIndicator(
                                 Modifier
                                     .align(Alignment.Center)
                                     .graphicsLayer {
@@ -548,19 +550,21 @@ fun HomeScreen(
  */
 private data class HomeContent(
     val weather: CurrentWeather,
-    val today: DailyForecast?,
+    val forecast: List<DailyForecast>,
     val daily: List<DailyWeatherInfo>,
     val warnings: List<WeatherWarning>,
     val minutely: MinutelyPrecipitation?,
     val aqi: AirQuality?,
     val hourly: List<HourlyWeatherInfo>,
-)
+) {
+    val today: DailyForecast? get() = forecast.firstOrNull()
+}
 
 private fun homeContent(vm: MainViewModel): HomeContent? {
     val weather = vm.weather.value ?: return null
     return HomeContent(
         weather = weather,
-        today = vm.dailyForecast.value.firstOrNull(),
+        forecast = vm.dailyForecast.value,
         daily = vm.dailyWeather.value,
         warnings = vm.warnings.value,
         minutely = vm.minutelyPrecipitation.value,
