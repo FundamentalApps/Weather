@@ -40,6 +40,7 @@ import org.fundamentalos.weather.ui.LocalScreenCovered
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import java.time.OffsetDateTime
+import java.time.temporal.ChronoUnit
 import kotlin.math.*
 
 /** Automatic quality is bounded, including on pre-AGSL devices. No per-frame bitmap allocation. */
@@ -75,14 +76,20 @@ private fun rememberVisible(): Boolean {
     return active && !covered()
 }
 
-/** Solar illumination uses wall time and is independent of animation enablement and forecast age. */
+/**
+ * Solar illumination uses wall time and is independent of animation enablement and forecast
+ * age. The time is kept to the minute: the sun needs no finer, and a value that only changes
+ * when the minute does lets a screen pushed over the sky and taken away again — which restarts
+ * this — leave everything coloured by it alone.
+ */
 @Composable
 fun rememberSkyWallTime(): State<OffsetDateTime> {
     val visible = rememberVisible()
-    return produceState(OffsetDateTime.now(), visible) {
+    return produceState(OffsetDateTime.now().truncatedTo(ChronoUnit.MINUTES), visible) {
         if (visible) while (isActive) {
-            value = OffsetDateTime.now()
-            delay(60_000)
+            val now = OffsetDateTime.now()
+            value = now.truncatedTo(ChronoUnit.MINUTES)
+            delay(60_000L - (now.second * 1000L + now.nano / 1_000_000L))
         }
     }
 }

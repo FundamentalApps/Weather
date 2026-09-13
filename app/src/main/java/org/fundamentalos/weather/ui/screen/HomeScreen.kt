@@ -96,10 +96,15 @@ fun HomeScreen(
             now = skyWallTime,
             darkTheme = darkTheme,
         )
-        val visualScheme = schemeOf(displayed)
+        // Remembered by their inputs: a recomposition that changes none of them must hand the
+        // theme the same colour scheme, or every card under it recomposes for nothing.
+        val visualScheme = remember(displayed, skyWallTime, darkTheme, fallbackPlace) { schemeOf(displayed) }
         val skyShown = transition.skyShown
-        val sky = if (skyShown === displayed) visualScheme.sky else schemeOf(skyShown).sky
-        val contentColorScheme = visualScheme.contentColorScheme(MaterialTheme.colorScheme)
+        val sky = remember(skyShown, visualScheme, fallbackPlace) {
+            if (skyShown === displayed) visualScheme.sky else schemeOf(skyShown).sky
+        }
+        val baseColorScheme = MaterialTheme.colorScheme
+        val contentColorScheme = remember(visualScheme, baseColorScheme) { visualScheme.contentColorScheme(baseColorScheme) }
         // The sky decides, not the system theme: a bright afternoon needs dark bar icons even
         // while the phone is in dark mode.
         StatusBarAppearance(lightBackground = !visualScheme.useDarkCards)
@@ -154,20 +159,21 @@ fun HomeScreen(
                                 displayed?.let { HomeCards(it, transition.enter, vm.currentLocation.value) }
                             }
                         }
-                        // Stands in for the first reading, where the cards will be, and goes as
-                        // they come; a failed request leaves nothing turning for nothing.
-                        if (displayed == null && vm.weatherStatus.value != MainViewModel.WeatherStatus.Error) {
-                            GlassLoadingIndicator(
-                                Modifier
-                                    .align(Alignment.Center)
-                                    .graphicsLayer {
-                                        val a = transition.indicatorAlpha.value
-                                        alpha = a
-                                        scaleX = 0.8f + 0.2f * a
-                                        scaleY = 0.8f + 0.2f * a
-                                    },
-                            )
-                        }
+                    }
+                    // Stands in for the first reading, in the middle of the screen itself rather
+                    // than of the cards' window, and goes as they come; a failed request leaves
+                    // nothing turning for nothing.
+                    if (displayed == null && vm.weatherStatus.value != MainViewModel.WeatherStatus.Error) {
+                        GlassLoadingIndicator(
+                            Modifier
+                                .align(Alignment.Center)
+                                .graphicsLayer {
+                                    val a = transition.indicatorAlpha.value
+                                    alpha = a
+                                    scaleX = 0.8f + 0.2f * a
+                                    scaleY = 0.8f + 0.2f * a
+                                },
+                        )
                     }
                 }
 
