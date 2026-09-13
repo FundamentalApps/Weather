@@ -20,6 +20,7 @@ import androidx.compose.ui.graphics.TileMode
 import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.layout
+import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
@@ -43,6 +44,9 @@ fun BlurRollText(
     color: Color,
     modifier: Modifier = Modifier,
     enter: Boolean = false,
+    maxLines: Int = Int.MAX_VALUE,
+    /** With it, a text too wide for its room is set smaller rather than wrapped or cut. */
+    autoSize: TextAutoSize? = null,
 ) {
     var shown by remember { mutableStateOf(text) }
     var leaving by remember { mutableStateOf<String?>(null) }
@@ -72,6 +76,8 @@ fun BlurRollText(
                 text = old,
                 style = style,
                 color = color,
+                maxLines = maxLines,
+                autoSize = autoSize,
                 modifier = Modifier
                     // Drawn at its own size, but takes up no room: the slot is the new text's.
                     .layout { measurable, constraints ->
@@ -90,6 +96,8 @@ fun BlurRollText(
             text = shown,
             style = style,
             color = color,
+            maxLines = maxLines,
+            autoSize = autoSize,
             modifier = Modifier.graphicsLayer {
                 val p = roll.value
                 alpha = p * p

@@ -21,6 +21,7 @@ import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.asComposeRenderEffect
 import androidx.compose.ui.graphics.drawscope.ContentDrawScope
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.graphicsLayer
@@ -148,33 +149,44 @@ class GlassBackdropState internal constructor(
     internal var origin: Offset = Offset.Zero
 }
 
-private class OffsetHolder(var value: Offset)
+/**
+ * Where a node lands in the root, and how much an ancestor's layer scales it: the headline
+ * shrinks as it pins, and its material is sampled in the node's own, unscaled coordinates.
+ */
+private class RootPlacement(var position: Offset = Offset.Zero, var scale: Offset = Offset(1f, 1f))
 
-private fun Modifier.trackRootPosition(holder: OffsetHolder): Modifier =
-    this.then(RootPositionTrackingElement(holder))
+private fun Modifier.trackRootPlacement(holder: RootPlacement): Modifier =
+    this.then(RootPlacementTrackingElement(holder))
 
-private data class RootPositionTrackingElement(
-    private val holder: OffsetHolder,
-) : ModifierNodeElement<RootPositionTrackingNode>() {
-    override fun create(): RootPositionTrackingNode = RootPositionTrackingNode(holder)
+private data class RootPlacementTrackingElement(
+    private val holder: RootPlacement,
+) : ModifierNodeElement<RootPlacementTrackingNode>() {
+    override fun create(): RootPlacementTrackingNode = RootPlacementTrackingNode(holder)
 
-    override fun update(node: RootPositionTrackingNode) {
+    override fun update(node: RootPlacementTrackingNode) {
         node.holder = holder
     }
 
     override fun InspectorInfo.inspectableProperties() {
-        name = "trackRootPosition"
+        name = "trackRootPlacement"
         properties["holder"] = holder
     }
 }
 
-private class RootPositionTrackingNode(
-    var holder: OffsetHolder,
+private class RootPlacementTrackingNode(
+    var holder: RootPlacement,
 ) : Modifier.Node(), GlobalPositionAwareModifierNode, DrawModifierNode {
     override fun onGloballyPositioned(coordinates: LayoutCoordinates) {
         val nextPosition = coordinates.positionInRoot()
-        if (holder.value != nextPosition) {
-            holder.value = nextPosition
+        // A unit step in the node's own space, measured in the root: the layers' scale.
+        val step = coordinates.localToRoot(Offset(1f, 1f)) - nextPosition
+        val nextScale = Offset(
+            if (step.x > 0f) step.x else 1f,
+            if (step.y > 0f) step.y else 1f,
+        )
+        if (holder.position != nextPosition || holder.scale != nextScale) {
+            holder.position = nextPosition
+            holder.scale = nextScale
             invalidateDraw()
         }
     }
@@ -326,25 +338,37 @@ val LocalGlassBackdrop = compositionLocalOf<GlassBackdropState?> { null }
 fun Modifier.conditionTextGlassMaterial(): Modifier {
     val backdrop = LocalGlassBackdrop.current ?: return this
     val maskLayer = rememberGraphicsLayer()
-    val pos = remember { OffsetHolder(Offset.Zero) }
+    val placement = remember { RootPlacement() }
 
     return this
         .graphicsLayer {
             compositingStrategy = CompositingStrategy.Offscreen
         }
-        .trackRootPosition(pos)
+        .trackRootPlacement(placement)
         .drawWithContent {
             val layerSize = size.toLayerIntSize()
             maskLayer.blendMode = BlendMode.DstIn
             maskLayer.record(size = layerSize) { this@drawWithContent.drawContent() }
 
-            val dx = pos.value.x - backdrop.origin.x
-            val dy = pos.value.y - backdrop.origin.y
-            translate(left = -dx, top = -dy) {
-                drawLayer(backdrop.conditionTextLayer)
-            }
+            drawBackdropUnder(backdrop.conditionTextLayer, backdrop.origin, placement)
             drawLayer(maskLayer)
         }
+}
+
+/**
+ * Draws [layer], recorded over the backdrop's source, so that it lines up with the source
+ * behind this node: shifted by where the node is, and, where an ancestor's layer scales the
+ * node, enlarged by the inverse — the node draws in its own unscaled space, so at half scale
+ * the backdrop must cover twice the width to reach the node's far edge.
+ */
+private fun DrawScope.drawBackdropUnder(layer: GraphicsLayer, origin: Offset, placement: RootPlacement) {
+    val dx = placement.position.x - origin.x
+    val dy = placement.position.y - origin.y
+    scale(1f / placement.scale.x, 1f / placement.scale.y, pivot = Offset.Zero) {
+        translate(left = -dx, top = -dy) {
+            drawLayer(layer)
+        }
+    }
 }
 
 /**
@@ -358,23 +382,19 @@ fun Modifier.conditionTextGlassMaterial(): Modifier {
 fun Modifier.cardTitleGlassMaterial(): Modifier {
     val backdrop = LocalGlassBackdrop.current ?: return this
     val maskLayer = rememberGraphicsLayer()
-    val pos = remember { OffsetHolder(Offset.Zero) }
+    val placement = remember { RootPlacement() }
 
     return this
         .graphicsLayer {
             compositingStrategy = CompositingStrategy.Offscreen
         }
-        .trackRootPosition(pos)
+        .trackRootPlacement(placement)
         .drawWithContent {
             val layerSize = size.toLayerIntSize()
             maskLayer.blendMode = BlendMode.DstIn
             maskLayer.record(size = layerSize) { this@drawWithContent.drawContent() }
 
-            val dx = pos.value.x - backdrop.origin.x
-            val dy = pos.value.y - backdrop.origin.y
-            translate(left = -dx, top = -dy) {
-                drawLayer(backdrop.cardTitleTextLayer)
-            }
+            drawBackdropUnder(backdrop.cardTitleTextLayer, backdrop.origin, placement)
             drawLayer(maskLayer)
         }
 }

@@ -24,6 +24,7 @@ import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalWindowInfo
+import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
@@ -64,6 +65,9 @@ val BannerScrollReserve: Dp =
 
 private val TemperatureSize = 57.sp
 private val ConditionSize = 50.sp
+
+/** How small the condition may be set to stay on its one line. */
+private val ConditionMinSize = 28.sp
 private val HeadlineHeight = 81.dp
 
 /**
@@ -203,6 +207,10 @@ fun Banner(
                 ),
                 color = if (glass) Color.White else onSurface.copy(alpha = 0.75f),
                 enter = enter,
+                // One line beside the temperature: "Partly cloudy" would otherwise wrap into
+                // the headline's fixed height and lose its second line.
+                maxLines = 1,
+                autoSize = TextAutoSize.StepBased(minFontSize = ConditionMinSize, maxFontSize = ConditionSize),
             )
         }
     }
