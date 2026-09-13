@@ -10,24 +10,29 @@ import kotlin.math.roundToInt
 /**
  * Turns a categorical temperature image into a smooth colour field.
  *
- * The source paints every model cell in one of the legend's band colours, so each pixel is read
- * back as the middle of its band, the values are blurred over about one model cell, and the
- * result is coloured again along the legend's gradient. Valid data always stays visible: the
- * source's own coverage is kept as the alpha channel, so missing data stays transparent rather
- * than turning into cold air.
+ * The source paints every model cell in one of the [legend]'s band colours, so each pixel is
+ * read back as the middle of its band, the values are blurred over about one model cell, and
+ * the result is coloured again along the [palette]: the app's own temperature colours, so the
+ * map agrees with the forecast. Valid data always stays visible: the source's own coverage is
+ * kept as the alpha channel, so missing data stays transparent rather than turning into cold air.
  */
-class TemperatureField(legend: List<FosMapLegendStop>) {
+class TemperatureField(legend: List<FosMapLegendStop>, palette: List<Pair<Float, Int>>) {
     private val stops = legend.sortedBy { it.value }
     private val colors = IntArray(stops.size) { Color.parseColor("#" + stops[it].color.removePrefix("#")) }
     private val degrees = FloatArray(stops.size) { stops[it].value }
 
-    /** The legend gradient sampled every [LutStep] degrees, so colouring a pixel is one lookup. */
+    private val paletteStops = palette.sortedBy { it.first }
+    private val paletteDegrees = FloatArray(paletteStops.size) { paletteStops[it].first }
+    private val paletteColors = IntArray(paletteStops.size) { paletteStops[it].second }
+
+    /** The palette sampled every [LutStep] degrees, so colouring a pixel is one lookup. */
     private val lut: IntArray
-    private val lutMin: Float = degrees.first()
+    private val lutMin: Float = paletteDegrees.first()
 
     init {
         require(stops.isNotEmpty())
-        val count = (((degrees.last() - lutMin) / LutStep).roundToInt() + 1).coerceAtLeast(1)
+        require(paletteStops.isNotEmpty())
+        val count = (((paletteDegrees.last() - lutMin) / LutStep).roundToInt() + 1).coerceAtLeast(1)
         lut = IntArray(count) { colorAt(lutMin + it * LutStep) }
     }
 
@@ -146,17 +151,17 @@ class TemperatureField(legend: List<FosMapLegendStop>) {
     }
 
     private fun colorAt(value: Float): Int {
-        if (value <= degrees.first()) return colors.first() and 0xFFFFFF
-        for (i in 1 until degrees.size) if (value <= degrees[i]) {
-            val t = ((value - degrees[i - 1]) / (degrees[i] - degrees[i - 1])).coerceIn(0f, 1f)
+        if (value <= paletteDegrees.first()) return paletteColors.first() and 0xFFFFFF
+        for (i in 1 until paletteDegrees.size) if (value <= paletteDegrees[i]) {
+            val t = ((value - paletteDegrees[i - 1]) / (paletteDegrees[i] - paletteDegrees[i - 1])).coerceIn(0f, 1f)
             fun channel(shift: Int): Int {
-                val a = (colors[i - 1] shr shift) and 255
-                val b = (colors[i] shr shift) and 255
+                val a = (paletteColors[i - 1] shr shift) and 255
+                val b = (paletteColors[i] shr shift) and 255
                 return (a + (b - a) * t).roundToInt()
             }
             return (channel(16) shl 16) or (channel(8) shl 8) or channel(0)
         }
-        return colors.last() and 0xFFFFFF
+        return paletteColors.last() and 0xFFFFFF
     }
 
     private fun nearestBand(pixel: Int): Int = colors.indices.minBy { index ->

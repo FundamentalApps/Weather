@@ -49,20 +49,20 @@ class WeatherFieldOverlay(
 
     override fun onDetach(mapView: MapView) {
         store.removeListener(arrived)
-        store.trim()
         super.onDetach(mapView)
     }
 
     override fun draw(canvas: Canvas, projection: Projection) {
         val zoom = projection.zoomLevel
-        // A chunk is 2^(zoom - level) density-scaled tiles wide; this keeps it between 8 and 16.
+        // A chunk is 2^(zoom - level) density-scaled tiles wide; this keeps it between 4 and 8,
+        // which is about two chunk pixels per model cell on screen at a country zoom.
         val level = (floor(zoom).toInt() - LevelOffset).coerceIn(0, MaxChunkLevel)
         val count = 1 shl level
         val chunkPx = TileSystem.MapSize(zoom) / count
         projection.getMercatorViewPort(viewport)
-        // Ask for what is a half-screen away as well, so crossing into the next chunk is ready.
-        val marginX = (viewport.right - viewport.left) / 2
-        val marginY = (viewport.bottom - viewport.top) / 2
+        // Ask for what is a quarter-screen away as well, so crossing into the next chunk is ready.
+        val marginX = (viewport.right - viewport.left) / 4
+        val marginY = (viewport.bottom - viewport.top) / 4
         val firstX = floor((viewport.left - marginX) / chunkPx).toInt().coerceIn(0, count - 1)
         val lastX = floor((viewport.right + marginX) / chunkPx).toInt().coerceIn(0, count - 1)
         val firstY = floor((viewport.top - marginY) / chunkPx).toInt().coerceIn(0, count - 1)
@@ -184,9 +184,9 @@ class WeatherFieldOverlay(
 
     private companion object {
         const val FadeMillis = 300f
-        const val MaxOpacity = 0.8f
+        const val MaxOpacity = 0.55f
 
-        /** Level = floor(zoom) - this, so a chunk spans 8 to 16 density-scaled tiles. */
-        const val LevelOffset = 3
+        /** Level = floor(zoom) - this, so a chunk spans 4 to 8 density-scaled tiles. */
+        const val LevelOffset = 2
     }
 }

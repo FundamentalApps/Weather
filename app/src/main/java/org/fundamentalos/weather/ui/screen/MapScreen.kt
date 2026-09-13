@@ -37,10 +37,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.BiasAlignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -60,7 +62,6 @@ import org.fundamentalos.weather.ui.componets.LocalGlassBackdrop
 import org.fundamentalos.weather.ui.componets.StatusBarAppearance
 import org.fundamentalos.weather.ui.componets.TemperatureField
 import org.fundamentalos.weather.ui.componets.ContinuityTileProvider
-import org.fundamentalos.weather.ui.componets.bottomEdgeBlur
 import org.fundamentalos.weather.ui.componets.conditionTextGlassMaterial
 import org.fundamentalos.weather.ui.componets.glassBackdropSource
 import org.fundamentalos.weather.ui.componets.rememberGlassBackdropState
@@ -71,6 +72,16 @@ import org.fundamentalos.weather.ui.map.MapInkOverlay
 import org.fundamentalos.weather.ui.map.WeatherFieldOverlay
 import org.fundamentalos.weather.ui.map.WeatherFieldStore
 import org.fundamentalos.weather.ui.theme.PreviewThemeWithBg
+import org.fundamentalos.weather.ui.theme.harmonized
+import org.fundamentalos.weather.ui.theme.temperature0
+import org.fundamentalos.weather.ui.theme.temperature10
+import org.fundamentalos.weather.ui.theme.temperature20
+import org.fundamentalos.weather.ui.theme.temperature30
+import org.fundamentalos.weather.ui.theme.temperature40
+import org.fundamentalos.weather.ui.theme.temperature50
+import org.fundamentalos.weather.ui.theme.temperatureMinor10
+import org.fundamentalos.weather.ui.theme.temperatureMinor20
+import org.fundamentalos.weather.ui.theme.temperatureMinor40
 import org.fundamentalos.weather.viewmodel.MainViewModel
 import org.fundamentalos.weather.weather.provider.fos.FosApiClient
 import org.fundamentalos.weather.weather.provider.fos.FosMapLayer
@@ -111,6 +122,22 @@ private val DarkPaper = Color(0xFF2B2E36)
 
 /** The marker's ring and range colours if no temperature legend has arrived yet. */
 private const val FallbackMarkerColor = 0xFFF28C38.toInt()
+
+/**
+ * The forecast's temperature colours, by degree: the same stops the ten-day card's range bar is
+ * painted with, so the map and the card agree on what warm looks like.
+ */
+private val TemperaturePalette = listOf(
+    -40f to temperatureMinor40,
+    -20f to temperatureMinor20,
+    -10f to temperatureMinor10,
+    0f to temperature0,
+    10f to temperature10,
+    20f to temperature20,
+    30f to temperature30,
+    40f to temperature40,
+    50f to temperature50,
+)
 
 /**
  * The weather map: the field first, then the map's own ink — water, roads, borders and place
@@ -207,6 +234,9 @@ fun MapScreen(
             ownedMap?.onPause()
             if (ownedMap != null) ownedMap.onDetach() else provider?.detach()
             mapView = null
+            // The stores outlive the screen so the next visit is instant, but not at full size.
+            fieldStore.trim()
+            inkStore.trim()
         }
     }
 
@@ -219,16 +249,21 @@ fun MapScreen(
     // first time it is drawn, and until the location is known that view is (0°, 0°).
     var marker by remember { mutableStateOf<LocationBubbleOverlay?>(null) }
     val locale = context.resources.configuration.locales[0]
-    DisposableEffect(mapView, visible, center == null, darkMap) {
+    // The field is coloured with the forecast's own temperature palette, harmonised to the
+    // theme as the forecast's is, so a 30° on the map is the 30° of the ten-day card.
+    val palette = TemperaturePalette.map { (degrees, color) -> degrees to color.harmonized() }
+    val paletteArgb = palette.map { (degrees, color) -> degrees to color.toArgb() }
+    DisposableEffect(mapView, visible, center == null, darkMap, paletteArgb) {
         val map = mapView ?: return@DisposableEffect onDispose { }
         if (center == null) return@DisposableEffect onDispose { }
         map.controller.setCenter(center)
+        val paletteKey = "-p" + paletteArgb.hashCode().toUInt().toString(16)
         var legend: TemperatureField? = null
         val overlays = visible.map { layer ->
             if (layer.scheme == "wms3857" && layer.legend.isNotEmpty()) {
-                val field = TemperatureField(layer.legend)
+                val field = TemperatureField(layer.legend, paletteArgb)
                 if (legend == null) legend = field
-                WeatherFieldOverlay(map, FieldLayerSource(layer, field), fieldStore)
+                WeatherFieldOverlay(map, FieldLayerSource(layer, field, paletteKey), fieldStore)
             } else {
                 layer.toOverlay(context, map)
             }
@@ -284,14 +319,18 @@ fun MapScreen(
     Surface(modifier = modifier.fillMaxSize(), color = MaterialTheme.colorScheme.surface) {
         CompositionLocalProvider(LocalGlassBackdrop provides glassBackdrop) {
         Box(Modifier.fillMaxSize()) {
+            // The blurs and the glass text sample this box, paper included: the map view alone is
+            // translucent where the field is, and a blur of translucent content over the paper
+            // reads as a lighter band.
             Box(
                 Modifier
                     .fillMaxSize()
+                    .hazeSource(hazeState)
                     .then(if (glassBackdrop != null) Modifier.glassBackdropSource(glassBackdrop) else Modifier)
                     .background(if (darkMap) DarkPaper else LightPaper)
             ) {
                 mapView?.let { map ->
-                    AndroidView(factory = { map }, modifier = Modifier.fillMaxSize().hazeSource(hazeState))
+                    AndroidView(factory = { map }, modifier = Modifier.fillMaxSize())
                 }
             }
 
@@ -304,7 +343,7 @@ fun MapScreen(
             ) {
                 visible.firstOrNull { it.legend.isNotEmpty() }?.let { layer ->
                     Spacer(Modifier.height(12.dp))
-                    LegendCard(layer = layer, hazeState = hazeState)
+                    LegendCard(layer = layer, palette = palette, hazeState = hazeState)
                 }
             }
 
@@ -312,7 +351,6 @@ fun MapScreen(
                 modifier = Modifier
                     .align(Alignment.BottomStart)
                     .fillMaxWidth()
-                    .bottomEdgeBlur(hazeState, BlurOnlyHazeStyle())
                     .navigationBarsPadding()
                     .padding(start = 16.dp, end = 16.dp, top = 24.dp, bottom = 12.dp),
             ) {
@@ -352,17 +390,25 @@ fun MapScreen(
                     )
                 },
                 onBack = onBackClick,
+                blur = false,
             )
         }
         }
     }
 }
 
-/** What the layer's colours mean, as the scale the server sent with it. */
+/** What the field's colours mean: the forecast palette, cold at the bottom. */
 @Composable
-private fun LegendCard(layer: FosMapLayer, hazeState: HazeState, modifier: Modifier = Modifier) {
-    val stops = layer.legend
-    val colors = stops.map { Color(it.color.removePrefix("#").toLong(16) or 0xFF000000L) }
+private fun LegendCard(
+    layer: FosMapLayer,
+    palette: List<Pair<Float, Color>>,
+    hazeState: HazeState,
+    modifier: Modifier = Modifier,
+) {
+    val low = palette.first().first
+    val high = palette.last().first
+    // Fraction of the way from the bottom (cold) to the top (hot) a temperature sits.
+    fun fraction(degrees: Float) = (degrees - low) / (high - low)
     Column(
         modifier = modifier
             // Sized here rather than by its content: the divider inside would otherwise stretch
@@ -388,18 +434,19 @@ private fun LegendCard(layer: FosMapLayer, hazeState: HazeState, modifier: Modif
                     .width(8.dp)
                     .fillMaxHeight()
                     .clip(RoundedRectangle(4.dp))
-                    // The scale runs cold to hot; a legend reads the other way round.
-                    .background(Brush.verticalGradient(colors.reversed())),
+                    // The gradient's stops sit where their degrees do, top being hot.
+                    .background(
+                        Brush.verticalGradient(
+                            *palette.map { (degrees, color) -> (1f - fraction(degrees)) to color }.toTypedArray()
+                        )
+                    ),
             )
-            Column(
-                modifier = Modifier.padding(start = 10.dp).fillMaxHeight(),
-                verticalArrangement = Arrangement.SpaceBetween,
-            ) {
-                // The palette steps every five degrees and its two ends are open-ended, so the
-                // labels are the round numbers nearest the bands rather than the band values.
-                listOf(40, 20, 0, -20, -40).forEach { mark ->
+            Box(modifier = Modifier.padding(start = 10.dp).fillMaxHeight()) {
+                // Each mark beside the degree it names; the bottom one sits on the bar's end.
+                listOf(40f, 20f, 0f, -20f, -40f).forEach { mark ->
                     Text(
-                        text = mark.toString(),
+                        text = mark.toInt().toString(),
+                        modifier = Modifier.align(BiasAlignment(-1f, 1f - 2f * fraction(mark))),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.End,

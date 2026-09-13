@@ -150,18 +150,22 @@ fun GlassTopAppBar(
     onBack: (() -> Unit)? = null,
     actions: @Composable RowScope.() -> Unit = {},
     collapsingTitle: CollapsingTitle? = null,
+    /** Whether the content passing under the bar is frosted; a map keeps its edge sharp. */
+    blur: Boolean = true,
 ) {
     val style = BlurOnlyHazeStyle()
     val height = WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + AppBarHeight
     Box(modifier.fillMaxWidth()) {
         // The blur is its own box: hung on the bar itself it takes the bar's measured bounds,
         // which are not the bounds it draws within.
-        Box(
-            Modifier
-                .fillMaxWidth()
-                .height(height)
-                .topEdgeBlur(hazeState, style),
-        )
+        if (blur) {
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .height(height)
+                    .topEdgeBlur(hazeState, style),
+            )
+        }
         TopAppBar(
             // The bar carries no title of its own until the screen's has slid under it.
             title = {

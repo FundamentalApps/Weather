@@ -53,10 +53,13 @@ data class FieldChunkKey(val stamp: String, val level: Int, val x: Int, val y: I
 }
 
 /** Where a layer's chunks come from and how they are read. */
-class FieldLayerSource(val layer: FosMapLayer, val field: TemperatureField) {
-    /** Names one edition of the layer: a new model run or a moved tile path is a new drawer. */
+class FieldLayerSource(val layer: FosMapLayer, val field: TemperatureField, paletteKey: String = "") {
+    /**
+     * Names one edition of the layer: a new model run, a moved tile path or a change of palette
+     * is a new drawer, since the palette is baked into the chunks.
+     */
     val stamp: String = "${layer.id}-${layer.observedAt ?: 0}-" +
-        layer.urlTemplate.hashCode().toUInt().toString(16)
+        layer.urlTemplate.hashCode().toUInt().toString(16) + paletteKey
 }
 
 /**
@@ -210,10 +213,10 @@ class WeatherFieldStore(context: Context) {
         private const val Tag = "WeatherFieldStore"
 
         /**
-         * Room for eight chunks. A view needs four at most, and that leaves the level it just
-         * left and the edition it is replacing to stand in while the new ones load.
+         * Room for twelve chunks. A view and its margin need six at most, and that leaves the
+         * level it just left and the edition it is replacing to stand in while the new ones load.
          */
-        private const val MemoryBudgetBytes = 8 * ChunkSize * ChunkSize * 4
+        private const val MemoryBudgetBytes = 12 * ChunkSize * ChunkSize * 4
 
         private const val RetryAfterMillis = 10_000L
         private const val ConnectTimeoutMillis = 15_000

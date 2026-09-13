@@ -2,6 +2,7 @@ package org.fundamentalos.weather.ui.map
 
 import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.Matrix
 import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.Point
@@ -117,8 +118,13 @@ class LocationBubbleOverlay(
             val sweep = 270f
             val steps = 24
             val colors = IntArray(steps + 1) { colorFor(low + (high - low) * it / steps.toFloat()) }
-            val positions = FloatArray(steps + 1) { (start + sweep * it / steps) / 360f }
-            ring.shader = SweepGradient(cx, cy, colors, positions)
+            // The gradient runs 0..sweep from 3 o'clock and is turned to the arc's start; a
+            // gradient laid out past a full turn would wrap and paint the arc's end in the
+            // colour of its beginning.
+            val positions = FloatArray(steps + 1) { sweep / 360f * it / steps }
+            ring.shader = SweepGradient(cx, cy, colors, positions).apply {
+                setLocalMatrix(Matrix().apply { setRotate(start, cx, cy) })
+            }
             ring.strokeWidth = 5f * dp
             canvas.drawArc(ringRect, start, sweep, false, ring)
             ring.shader = null

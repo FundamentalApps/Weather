@@ -13,6 +13,9 @@ import java.io.ByteArrayOutputStream
 @RunWith(AndroidJUnit4::class)
 class TemperatureFieldTest {
     private val radius = 6
+
+    /** The legend's own colours as the output palette, so a band reads back as its colour. */
+    private fun List<FosMapLegendStop>.asPalette() = map { it.value to Color.parseColor("#" + it.color.removePrefix("#")) }
     private val gutter = 3 * radius
 
     private fun png(width: Int, height: Int, color: (x: Int, y: Int) -> Int): ByteArray {
@@ -24,7 +27,8 @@ class TemperatureFieldTest {
     }
 
     @Test fun uniformTemperatureRemainsVisibleWithoutReferenceRequest() {
-        val field = TemperatureField(listOf(FosMapLegendStop(20f, "#00FF00")))
+        val legend = listOf(FosMapLegendStop(20f, "#00FF00"))
+        val field = TemperatureField(legend, legend.asPalette())
         val result = field.decode(png(256, 256) { _, _ -> Color.GREEN }.inputStream(), gutter, radius)
         assertNotNull("A valid chunk must not wait for an average reference", result)
         assertEquals(256 - gutter * 2, result!!.width)
@@ -33,8 +37,9 @@ class TemperatureFieldTest {
     }
 
     @Test fun smoothsTemperaturesThroughIntermediateLegendColors() {
-        val field = TemperatureField(listOf(FosMapLegendStop(-10f, "#0000FF"),
-            FosMapLegendStop(0f, "#00FF00"), FosMapLegendStop(10f, "#FF0000")))
+        val legend = listOf(FosMapLegendStop(-10f, "#0000FF"),
+            FosMapLegendStop(0f, "#00FF00"), FosMapLegendStop(10f, "#FF0000"))
+        val field = TemperatureField(legend, legend.asPalette())
         val bytes = png(256, 256) { x, _ -> if (x < 128) Color.BLUE else Color.RED }
         val result = field.decode(bytes.inputStream(), gutter, radius)!!
         val middle = result.getPixel(128 - gutter, 100)
@@ -45,7 +50,8 @@ class TemperatureFieldTest {
     }
 
     @Test fun missingDataStaysTransparent() {
-        val field = TemperatureField(listOf(FosMapLegendStop(0f, "#0000FF"), FosMapLegendStop(20f, "#FF0000")))
+        val legend = listOf(FosMapLegendStop(0f, "#0000FF"), FosMapLegendStop(20f, "#FF0000"))
+        val field = TemperatureField(legend, legend.asPalette())
         val bytes = png(256, 256) { x, _ -> if (x < 128) Color.RED else Color.TRANSPARENT }
         val result = field.decode(bytes.inputStream(), gutter, radius)!!
         assertEquals(0, Color.alpha(result.getPixel(200 - gutter, 100)))
@@ -56,7 +62,8 @@ class TemperatureFieldTest {
     }
 
     @Test fun adjacentGutteredChunksMatchOneContinuousField() {
-        val field = TemperatureField(listOf(FosMapLegendStop(0f, "#0000FF"), FosMapLegendStop(20f, "#FF0000")))
+        val legend = listOf(FosMapLegendStop(0f, "#0000FF"), FosMapLegendStop(20f, "#FF0000"))
+        val field = TemperatureField(legend, legend.asPalette())
         fun decode(start: Int, width: Int): Bitmap {
             val bytes = png(width, 256) { x, _ -> if (x + start < 256) Color.BLUE else Color.RED }
             return field.decode(bytes.inputStream(), gutter, radius)!!
