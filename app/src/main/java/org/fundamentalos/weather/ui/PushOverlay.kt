@@ -131,11 +131,17 @@ fun PushStackEntry(
         try {
             events.collect { slide.progress.snapTo(1f - it.progress) }
             closing = true
-            slide.progress.snapTo(0f)
-            remove()
+            // Commit: finish the push-out from wherever the gesture was released, with the same
+            // animation the back arrow uses. A bare snapTo(0) here made a half-swipe release jump
+            // to the home screen with no transition. Run it in the composition scope, since the
+            // back-handler coroutine is torn down as this lambda returns.
+            scope.launch {
+                slide.progress.animateTo(0f, SlideSpec)
+                remove()
+            }
         } catch (_: CancellationException) {
-            // The back handler's coroutine is already cancelled here, so the recovery animation
-            // must run in the composition scope — a suspend on this job throws before it can start.
+            // Cancel: the back-handler coroutine is already cancelled here, so the recovery
+            // animation must run in the composition scope — a suspend on this job throws first.
             scope.launch { slide.progress.animateTo(1f, SlideSpec) }
         }
     }
