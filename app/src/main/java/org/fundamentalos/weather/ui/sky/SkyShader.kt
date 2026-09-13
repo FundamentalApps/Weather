@@ -28,11 +28,12 @@ float2 cloudCoordinates(float2 uv, float scale, float speed, float seed) {
     float2 puffy = float2(uv.x * 0.68, uv.y * 1.05) * scale;
     float2 wispy = float2(uv.x * 0.22, (uv.y + uv.x * 0.16) * 3.6) * scale;
     float form = max(cumulus, storm * 0.85);
-    // Surface calm does not imply stationary high cloud. Keep a gentle drift,
-    // with depth-dependent layer speeds, visible over a few seconds.
+    // Surface calm does not imply stationary high cloud. Keep a gentle drift with
+    // depth-dependent layer speeds: the nearest wisps cross the screen in about half a
+    // minute, the far bank in several.
     float windSpeed = length(wind);
     float2 flow = windSpeed > 0.001 ? wind * (max(windSpeed, 0.18) / windSpeed) : float2(0.18, 0.025);
-    return mix(wispy, puffy, form) + float2(seed, seed * 0.37) - flow * time * speed * 4.0;
+    return mix(wispy, puffy, form) + float2(seed, seed * 0.37) - flow * time * speed * 12.0;
 }
 
 // Density and opacity are shared by visible clouds and source occlusion.
@@ -158,13 +159,16 @@ half4 main(float2 coord) {
     // Neutral aerial scattering removes the blue cast around a bright solar source.
     float aureole = exp(-scatterDistance * scatterDistance / 0.025);
     sky = mix(sky, float3(0.71, 0.71, 0.69), aureole * solarVisibility * 0.58);
+    // The air in front of the sun is never quite still: the lobes turn, slowly, and the
+    // glow breathes a little, on two paces that never quite repeat.
+    float breath = 1.0 + 0.05 * sin(time * 0.6) + 0.03 * sin(time * 1.7 + 0.9);
     // One continuous emitter: the six lobes extend the disc rather than overlaying it.
-    float orientation = 0.3 + (sun.x - 0.315) * 0.8;
+    float orientation = 0.3 + (sun.x - 0.315) * 0.8 + time * 0.05;
     float aperture = abs(cos(angle * 3.0 + orientation));
     // Broad roots merge into the aureole; only the outer tips become narrow.
     float raySharpness = mix(7.0, 26.0, smoothstep(0.022, 0.09, distance));
     float rays = pow(aperture, raySharpness);
-    float rayFalloff = exp(-max(distance - 0.033, 0.0) / 0.024);
+    float rayFalloff = exp(-max(distance - 0.033, 0.0) / 0.024) * breath;
     rayFalloff *= 1.0 - smoothstep(0.092, 0.118, distance);
     float core = 1.0 - smoothstep(0.022, 0.052, distance);
     float diffraction = rays * rayFalloff * directExposure;
@@ -176,22 +180,30 @@ half4 main(float2 coord) {
     float outerScatter = exp(-scatterDistance * scatterDistance / 0.0240) * 0.24;
     float bloom = innerScatter + (1.0 - innerScatter) * outerScatter;
     float softLobes = pow(aperture, 8.0) * rayFalloff * directExposure;
-    float scattering = clamp(bloom + softLobes * (1.0 - core) * 0.10, 0.0, 1.0);
+    float scattering = clamp((bloom + softLobes * (1.0 - core) * 0.10) * breath, 0.0, 1.0);
     sky = mix(sky, float3(0.99, 0.945, 0.85), scattering * solarVisibility);
     float3 emissionColor = mix(float3(1.0, 0.992, 0.975), float3(1.0, 0.97, 0.89),
         smoothstep(0.018, 0.10, distance));
     sky = mix(sky, emissionColor, emission * solarVisibility);
     }
-    // Randomized cell positions avoid a visible star grid. No flashing star animation.
+    // Randomized cell positions avoid a visible star grid.
     float2 grid = uv * float2(52.0, 110.0);
     float2 cell = floor(grid);
     float hash = fract(sin(dot(cell, float2(127.1, 311.7))) * 43758.5453);
     float hash2 = fract(hash * 135.78);
+    float hash3 = fract(hash * 91.37);
     float2 pos = float2(0.2 + hash * 0.6, 0.2 + hash2 * 0.6);
     float star = exp(-dot(fract(grid) - pos, fract(grid) - pos) / mix(0.001, 0.012, hash2));
     float visibleStars = step(0.956, hash) * (1.0 - daylight) * (1.0 - haze * 0.7);
     float3 starColor = mix(float3(0.55, 0.69, 0.92), float3(1.0, 0.94, 0.73), hash2);
-    sky += starColor * star * visibleStars * (0.35 + hash2 * 0.5);
+    // A quarter of them twinkle, a little and unevenly, the way the air makes stars do;
+    // the rest hold still, so the sky does not sparkle.
+    float twinkle = 1.0;
+    if (hash3 > 0.75) {
+        float pace = 1.2 + hash3 * 2.5;
+        twinkle = 0.80 + 0.12 * sin(time * pace + hash * 6.2832) + 0.08 * sin(time * pace * 1.73 + hash2 * 6.2832);
+    }
+    sky += starColor * star * visibleStars * (0.35 + hash2 * 0.5) * twinkle;
     if (uv.y < 0.50 && cover > 0.06) {
     float4 farCloud = cloudLayer(uv, 1.15, 0.00055, 0.13, 0.42);
     sky = mix(sky, farCloud.rgb, farCloud.a);
