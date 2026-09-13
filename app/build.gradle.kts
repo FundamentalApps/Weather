@@ -9,13 +9,11 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
 }
 
-val gitVersionCode = providers.exec {
-    commandLine("git", "rev-list", "--count", "--first-parent", "HEAD")
-}.standardOutput.asText.map { it.trim().toInt() }
-
-val gitVersionName = providers.exec {
-    commandLine("git", "describe", "--tags", "--match", "v[0-9]*")
-}.standardOutput.asText.map { it.trim().removePrefix("v") }
+// Bumped by hand for each release, together with its v* tag: static, so a build needs no git
+// history and F-Droid can read the version off this file. The code carries on from the commit
+// counts the earlier builds were numbered by, so it only ever goes up.
+val appVersionCode = 93
+val appVersionName = "0.1.0"
 
 val localProperties = Properties().apply {
     val file = rootProject.file("local.properties")
@@ -37,8 +35,8 @@ extensions.configure<ApplicationExtension>("android") {
         applicationId = "org.fundamentalos.weather"
         minSdk = 24
         targetSdk = 35
-        versionCode = gitVersionCode.get()
-        versionName = gitVersionName.get()
+        versionCode = appVersionCode
+        versionName = appVersionName
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
