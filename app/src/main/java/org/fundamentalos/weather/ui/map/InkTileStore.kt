@@ -88,16 +88,19 @@ class InkTile(
     val zoom: Int,
     val paths: InkPaths,
     val labels: List<InkLabel>,
+    val masks: InkMasks? = null,
+    /** Whether the masks have been set; a tile with nothing to draw is set and has none. */
+    val isSet: Boolean = false,
 ) {
-    @Volatile var masks: InkMasks? = null
-        private set
-
-    fun set(style: InkStyle) {
-        masks = InkRenderer.render(paths, style, zoom)
-    }
+    /**
+     * The same tile with its masks set. A new object rather than a change to this one: a tile
+     * in the cache must not change size under the cache, which throws when it notices.
+     */
+    fun set(style: InkStyle): InkTile =
+        InkTile(extent, zoom, paths, labels, InkRenderer.render(paths, style, zoom), isSet = true)
 
     /** What the cache charges for the tile: the masks, plus a guess for the paths and labels. */
-    val bytes: Int get() = (masks?.bytes ?: 0) + labels.size * 256 + 200_000
+    val bytes: Int = (masks?.bytes ?: 0) + labels.size * 256 + 200_000
 
     companion object {
         /** The layers the map reads; the rest of the tile is not even decoded. */
@@ -341,7 +344,7 @@ class InkTileStore(context: Context) {
                         // A tile set in a style that has since changed is not kept.
                         if (this@InkTileStore.style == style) {
                             synchronized(known) { known.add(key) }
-                            if (tile.masks != null) memory.put(key, tile) else pantry.put(key, tile)
+                            if (tile.isSet) memory.put(key, tile) else pantry.put(key, tile)
                         }
                         failedAt.remove(key)
                     } else {
@@ -361,17 +364,17 @@ class InkTileStore(context: Context) {
         val style = style ?: return
         val tile = peek(key) ?: return
         synchronized(inFlight) {
-            if (tile.masks != null || !resetting.add(key)) return
+            if (tile.isSet || !resetting.add(key)) return
             scope.launch {
                 try {
-                    gate.withPermit { tile.set(style) }
-                    // Move it among the set tiles, so the cache charges for the masks.
+                    val done = gate.withPermit { tile.set(style) }
+                    // Swap it in among the set tiles, so the cache charges for the masks.
                     synchronized(inFlight) {
-                        if (peek(key) === tile) {
-                            memory.remove(key)
+                        if (peek(key) === tile && this@InkTileStore.style == style) {
                             pantry.remove(key)
+                            memory.remove(key)
                             synchronized(known) { known.add(key) }
-                            memory.put(key, tile)
+                            memory.put(key, done)
                         }
                     }
                     withContext(Dispatchers.Main) { listeners.forEach { it() } }
@@ -418,8 +421,8 @@ class InkTileStore(context: Context) {
             fetched = false
         }
         val read = SystemClock.elapsedRealtime()
-        val tile = InkTile.from(MvtDecoder.decode(bytes, InkTile.Layers), key.zoom)
-        if (set) tile.set(style)
+        val decoded = InkTile.from(MvtDecoder.decode(bytes, InkTile.Layers), key.zoom)
+        val tile = if (set) decoded.set(style) else decoded
         Log.d(
             Tag, "tile ${key.zoom}/${key.x},${key.y}: ${bytes.size} bytes " +
                 "${if (fetched) "fetched" else "from disk"} in ${read - started} ms, " +

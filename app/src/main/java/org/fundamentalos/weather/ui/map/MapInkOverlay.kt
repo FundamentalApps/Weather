@@ -115,7 +115,7 @@ class MapInkOverlay(
                 drawStandIn(canvas, projection, key)
                 continue
             }
-            if (tile.masks == null) {
+            if (!tile.isSet) {
                 // Baked ahead but not yet set: set it now, and stand in until it is.
                 store.set(key)
                 drawStandIn(canvas, projection, key)

@@ -72,7 +72,6 @@ import org.fundamentalos.weather.ui.map.MapInkOverlay
 import org.fundamentalos.weather.ui.map.WeatherFieldOverlay
 import org.fundamentalos.weather.ui.map.WeatherFieldStore
 import org.fundamentalos.weather.ui.theme.PreviewThemeWithBg
-import org.fundamentalos.weather.ui.theme.harmonized
 import org.fundamentalos.weather.ui.theme.temperature0
 import org.fundamentalos.weather.ui.theme.temperature10
 import org.fundamentalos.weather.ui.theme.temperature20
@@ -249,9 +248,9 @@ fun MapScreen(
     // first time it is drawn, and until the location is known that view is (0°, 0°).
     var marker by remember { mutableStateOf<LocationBubbleOverlay?>(null) }
     val locale = context.resources.configuration.locales[0]
-    // The field is coloured with the forecast's own temperature palette, harmonised to the
-    // theme as the forecast's is, so a 30° on the map is the 30° of the ten-day card.
-    val palette = TemperaturePalette.map { (degrees, color) -> degrees to color.harmonized() }
+    // The field is coloured with the forecast's own temperature palette, unharmonised: a field
+    // is read against the legend, so its colours must be the same on every device.
+    val palette = TemperaturePalette
     val paletteArgb = palette.map { (degrees, color) -> degrees to color.toArgb() }
     DisposableEffect(mapView, visible, center == null, darkMap, paletteArgb) {
         val map = mapView ?: return@DisposableEffect onDispose { }
