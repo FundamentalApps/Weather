@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What This Is
 
-Caelum is a native Android weather app built with Kotlin and Jetpack Compose. It fetches weather data from a companion Rust backend (`../caelum-server`) which proxies [QWeather](https://dev.qweather.com/) API calls. The backend handles JWT auth, caching (Redis), and database persistence (MySQL).
+Weather is a native Android weather app (`org.fundamentalos.weather`) built with Kotlin and Jetpack Compose. Weather data comes from the **FundamentalOS** backend (a hosted API at `https://api.fundamentalos.org`), which aggregates upstream sources — forecast and air quality from Open-Meteo, place names from GeoNames, IP geolocation from DB-IP Lite (see `DataSourcesScreen` for the full credit list). This repo is the Android client only; the backend is a separate project.
 
 ## Build & Run
 
@@ -24,27 +24,30 @@ Caelum is a native Android weather app built with Kotlin and Jetpack Compose. It
 
 Version code is derived from `git rev-list --count --first-parent HEAD`; version name from git tags matching `v[0-9]*`.
 
-API base URLs are loaded from `local.properties` (not committed). The file needs entries for dev/prod API endpoints before the app builds.
+`local.properties` (not committed) may set `app.fosApiBaseUrl` to point at a different FundamentalOS API base URL; it defaults to `https://api.fundamentalos.org`.
 
 ## Architecture
 
-**Pattern**: Single-Activity MVVM with Jetpack Compose UI.
+**Pattern**: Single-Activity MVVM with Jetpack Compose. `WeatherApplication` bootstraps Koin; `MainActivity` hosts `WeatherApp`, which owns the back stack and drives the screens.
 
-**Dependency Injection**: Koin — modules defined in `app/src/main/java/ink/duo3/caelum/di/Module.kt`. The `CaelumApplication` bootstraps Koin.
+**Dependency Injection**: Koin — module in `app/src/main/java/org/fundamentalos/weather/di/Module.kt`.
 
 **Data flow**:
 ```
-HomeScreen (Compose)
+WeatherApp / HomeScreen (Compose)
   └── MainViewModel (StateFlow + coroutines)
-        └── WeatherModule (API layer, Ktor client)
-              └── caelum-server HTTP endpoints (/weather/*)
+        └── WeatherService ──► ProviderRegistry ──► FundamentalOsWeatherProvider ──► FosApiClient
 ```
 
-**Location acquisition** (`MainViewModel`): Tries 5 sources in priority order — GPS, network, passive, last-known, and a fallback. Location is passed as lat/lon to the server.
+**Weather providers** (`weather/provider/`): the app is built around a small provider abstraction — `WeatherProvider` (the interface), `ProviderRegistry` (holds the registered providers, deduped by id, and names the default), and `WeatherService` (what the ViewModel calls). Today **`FundamentalOsWeatherProvider` is the only registered provider**; the abstraction is kept so another source could be added without touching the UI. Domain models live in `weather/domain/`; the provider maps its wire models (`fos/FosModels`) into them.
 
-**API client** (`CaelumApiClient` + `WeatherModule`): Ktor-based HTTP client with `kotlinx.serialization`. All responses are wrapped in `WebResp<T>`. The single `/weather/all` endpoint fetches current, forecast, hourly, and AQI in one call.
+**FundamentalOS API** (`FosApiClient`): a Ktor client with `kotlinx.serialization`. Endpoints: `snapshot` (lat/lon → current conditions, forecast, hourly, and air quality in one call), `reverse` (lat/lon → place), `search` (query → places), `mapLayers` (weather-map overlays), `locateByIp` (server-side IP geolocation).
 
-**Room database**: Used for caching weather data locally. Schema migrations live in `app/schemas/`. KSP generates the DAOs.
+**Warnings & icons**: severity colors and weather-icon codes use a shared code format the backend returns — `WarningSeverity.fromSeverityColor`, `WarningIcons`, `WarningTheme`, and the `dayMaps` icon table — so labels do not depend on any single upstream source or on server language.
+
+**Location acquisition** (`MainViewModel`): tries system sources in priority order (GPS, network, passive, last-known) and falls back to the server's IP geolocation (`FosApiClient.locateByIp`) when they come up empty. The chosen location is passed as lat/lon to the provider.
+
+**Persistence**: lightweight state only, via `SharedPreferences` (`AppSettings`, `SavedPlaces`). There is no local database.
 
 ## Key Libraries
 
@@ -54,31 +57,12 @@ HomeScreen (Compose)
 | HTTP | Ktor Client 3.x (Android engine) |
 | Serialization | `kotlinx.serialization` |
 | DI | Koin 4.x |
-| DB | Room 2.7 (KSP) |
 | Date/Time | `kotlinx-datetime` |
 | Blur/glass effects | Haze |
 | Permissions | Accompanist Permissions |
 
 All versions are managed in `gradle/libs.versions.toml`.
 
-## caelum-server (../caelum-server)
+## Tools
 
-The backend is a Rust/Axum REST API. Relevant commands:
-
-```bash
-cargo build --release
-cargo run --release    # reads application.yaml for config
-cargo test
-```
-
-Config is YAML (`application.yaml`): server bind address, MySQL, Redis, and QWeather credentials including an Ed25519 PEM private key for JWT. Docker deployment uses a multi-stage Cargo-Chef build.
-
-**Endpoints** (all under `/weather/`):
-- `getCityByLocation` — reverse geocoding (lat/lon → city)
-- `now` — current conditions by city ID
-- `10d` — 10-day forecast
-- `24h` — hourly forecast
-- `aqiNow` — air quality by coordinates
-- `all` — unified endpoint combining the above
-
-The server generates short-lived EdDSA JWTs (1-hour expiry, auto-refreshed) to authenticate with QWeather's API.
+`tools/palette-lab/` is a standalone WebGL page ("Weather Palette Lab") for designing the sky/weather color fields — pick a weather archetype, tune four colors, preview the shader — before folding the result into the app's sky and theme.
