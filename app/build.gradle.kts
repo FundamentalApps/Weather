@@ -1,5 +1,4 @@
 import com.android.build.api.dsl.ApplicationExtension
-import com.google.devtools.ksp.gradle.KspExtension
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.dsl.KotlinAndroidProjectExtension
 import java.util.Properties
@@ -8,7 +7,6 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.serialization)
-    alias(libs.plugins.ksp)
 }
 
 val gitVersionCode = providers.exec {
@@ -24,12 +22,6 @@ val localProperties = Properties().apply {
     if (file.isFile) {
         file.inputStream().use(::load)
     }
-}
-
-fun localStringProperty(name: String): String {
-    val value = localProperties.getProperty(name)
-        ?: error("Missing '$name' in local.properties")
-    return "\"${value.trim().trim('"')}\""
 }
 
 fun localStringPropertyOr(name: String, default: String): String {
@@ -62,7 +54,6 @@ extensions.configure<ApplicationExtension>("android") {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
             )
-            buildConfigField("String", "API_BASE_URL", localStringProperty("app.apiBaseUrl.prod"))
         }
         create("benchmark") {
             initWith(getByName("release"))
@@ -72,9 +63,6 @@ extensions.configure<ApplicationExtension>("android") {
             signingConfig = signingConfigs.getByName("debug")
             applicationIdSuffix = ".benchmark"
             matchingFallbacks += "release"
-        }
-        debug {
-            buildConfigField("String", "API_BASE_URL", localStringProperty("app.apiBaseUrl.dev"))
         }
     }
 
@@ -140,14 +128,6 @@ dependencies {
 
     implementation(libs.kotlinx.datetime)
 
-    ksp(libs.room.compiler)
-    implementation(libs.room.runtime)
-    implementation(libs.room.ktx)
-
     implementation(libs.kotlinx.coroutines.android)
     testImplementation(libs.kotlinx.coroutines.test)
-}
-
-extensions.configure<KspExtension>("ksp") {
-    arg("room.schemaLocation", "$projectDir/schemas")
 }
