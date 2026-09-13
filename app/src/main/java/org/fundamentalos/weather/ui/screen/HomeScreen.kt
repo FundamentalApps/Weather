@@ -138,8 +138,14 @@ fun HomeScreen(
     // reading changes underneath, and they fade back up showing the new one, while the headline
     // rolls to its new figures. The first reading arrives differently: the indicator that stood
     // in for it goes, and the headline and the cards come up, one after another.
-    val incoming = homeContent(vm)
+    val place = remember { doubleArrayOf(Double.NaN, Double.NaN) }
+    vm.currentLocation.value?.let { place[0] = it.latitude; place[1] = it.longitude }
+    val incoming = homeContent(vm, place)
     var displayed by remember { mutableStateOf(incoming) }
+    // The sky is given the new reading as the change begins, a step ahead of the cards: its
+    // turn from one sky to another shows mostly in the middle of its cross-fade, which then
+    // lands as the cards come back up in their new colours, rather than a moment after.
+    var skyShown by remember { mutableStateOf(incoming) }
     var entered by remember { mutableStateOf(false) }
     val contentAlpha = remember { Animatable(1f) }
     val enter = remember { Animatable(if (incoming == null) 0f else 1f) }
@@ -154,6 +160,7 @@ fun HomeScreen(
             val shown = displayed
             when {
                 shown == null -> {
+                    skyShown = next
                     indicatorAlpha.animateTo(0f, tween(IndicatorLeaveMillis, easing = FastOutLinearInEasing))
                     entered = true
                     displayed = next
@@ -165,8 +172,13 @@ fun HomeScreen(
                     enter.animateTo(1f, tween(EnterMillis, delayMillis = EnterLeadMillis, easing = LinearEasing))
                 }
                 shown != next -> {
+                    skyShown = next
                     contentAlpha.animateTo(0f, tween(SwapOutMillis, easing = FastOutLinearInEasing))
                     displayed = next
+                    // The frame that composes the new reading's cards is a long one; the fade
+                    // back up starts after it, whole, rather than losing its first third to it.
+                    withFrameNanos { }
+                    withFrameNanos { }
                     contentAlpha.animateTo(1f, tween(SwapInMillis, easing = FastOutSlowInEasing))
                 }
             }
@@ -182,16 +194,25 @@ fun HomeScreen(
 
 
             val skyWallTime by rememberSkyWallTime()
-            // Coloured for the reading on show, not the newest one: the colours change with
-            // the cards, at the bottom of their fade, and not a moment before.
+            // Coloured for the reading on show, not the newest one, sun and all: the colours
+            // change with the cards, at the bottom of their fade, and not a moment before.
+            // Before the weather is known, the device's own place puts the sun where it is.
+            val shownPlace = displayed
             val visualScheme = weatherVisualScheme(
-                current = displayed?.weather,
-                dailyForecast = displayed?.forecast ?: emptyList(),
-                // Before the weather is known, the device's own place puts the sun where it is.
-                latitude = (vm.currentLocation.value ?: vm.deviceLocation.value)?.latitude,
-                longitude = (vm.currentLocation.value ?: vm.deviceLocation.value)?.longitude,
+                current = shownPlace?.weather,
+                dailyForecast = shownPlace?.forecast ?: emptyList(),
+                latitude = shownPlace?.latitude ?: (vm.currentLocation.value ?: vm.deviceLocation.value)?.latitude,
+                longitude = shownPlace?.longitude ?: (vm.currentLocation.value ?: vm.deviceLocation.value)?.longitude,
                 now = skyWallTime,
             )
+            val skyPlace = skyShown
+            val sky = if (skyPlace === shownPlace) visualScheme.sky else weatherVisualScheme(
+                current = skyPlace?.weather,
+                dailyForecast = skyPlace?.forecast ?: emptyList(),
+                latitude = skyPlace?.latitude ?: (vm.currentLocation.value ?: vm.deviceLocation.value)?.latitude,
+                longitude = skyPlace?.longitude ?: (vm.currentLocation.value ?: vm.deviceLocation.value)?.longitude,
+                now = skyWallTime,
+            ).sky
             val baseColorScheme = MaterialTheme.colorScheme
             val isLightCard = !visualScheme.useDarkCards
             val subtleContainer = visualScheme.harmonizeTarget.copy(
@@ -262,7 +283,7 @@ fun HomeScreen(
                             .fillMaxSize()
                     ) {
                         WeatherSkyBackground(
-                            sky = visualScheme.sky,
+                            sky = sky,
                             animated = settings.animatedBackground,
                             modifier = if (glassBackdrop != null) Modifier.glassBackdropSource(glassBackdrop) else Modifier,
                         )
@@ -556,14 +577,24 @@ private data class HomeContent(
     val minutely: MinutelyPrecipitation?,
     val aqi: AirQuality?,
     val hourly: List<HourlyWeatherInfo>,
+    /** Where the reading is from, which puts the sun in its sky. */
+    val latitude: Double?,
+    val longitude: Double?,
 ) {
     val today: DailyForecast? get() = forecast.firstOrNull()
 }
 
-private fun homeContent(vm: MainViewModel): HomeContent? {
+/**
+ * The reading the view model holds now. [place] is the last place it named, kept by the caller:
+ * handing the page back to the device's location forgets the place before the new reading
+ * comes, and the reading on show keeps its own sun until then.
+ */
+private fun homeContent(vm: MainViewModel, place: DoubleArray): HomeContent? {
     val weather = vm.weather.value ?: return null
     return HomeContent(
         weather = weather,
+        latitude = place[0].takeIf { !it.isNaN() },
+        longitude = place[1].takeIf { !it.isNaN() },
         forecast = vm.dailyForecast.value,
         daily = vm.dailyWeather.value,
         warnings = vm.warnings.value,
