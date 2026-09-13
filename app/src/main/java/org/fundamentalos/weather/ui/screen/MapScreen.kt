@@ -5,11 +5,9 @@ import org.fundamentalos.weather.ui.text.localizedTime
 import org.fundamentalos.weather.R
 import androidx.compose.ui.res.stringResource
 import android.content.Context
-import android.graphics.Canvas
 import android.graphics.Color as AndroidColor
 import android.graphics.ColorMatrix
 import android.graphics.ColorMatrixColorFilter
-import android.graphics.Paint
 import android.os.Build
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -43,9 +41,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -69,6 +65,9 @@ import org.fundamentalos.weather.ui.componets.conditionTextGlassMaterial
 import org.fundamentalos.weather.ui.componets.glassBackdropSource
 import org.fundamentalos.weather.ui.componets.rememberGlassBackdropState
 import org.fundamentalos.weather.ui.map.FieldLayerSource
+import org.fundamentalos.weather.ui.map.InkTileStore
+import org.fundamentalos.weather.ui.map.LocationBubbleOverlay
+import org.fundamentalos.weather.ui.map.MapInkOverlay
 import org.fundamentalos.weather.ui.map.WeatherFieldOverlay
 import org.fundamentalos.weather.ui.map.WeatherFieldStore
 import org.fundamentalos.weather.ui.theme.PreviewThemeWithBg
@@ -90,8 +89,6 @@ import org.osmdroid.util.MapTileIndex
 import org.osmdroid.util.TileSystem
 import org.osmdroid.views.CustomZoomButtonsController
 import org.osmdroid.views.MapView
-import org.osmdroid.views.Projection
-import org.osmdroid.views.overlay.Overlay
 import org.osmdroid.views.overlay.TilesOverlay
 import kotlin.math.log2
 import kotlin.math.max
@@ -108,28 +105,17 @@ private const val MaxZoom = 13.0
 /** Every xyz layer here covers the world, so its own tiles start at the top. */
 private const val MinTileZoom = 1
 
-private val GoogleBlue = Color(0xFF4285F4)
+/** The map paper: what shows where the field has nothing, and behind its translucency. */
+private val LightPaper = Color(0xFFF3F0EA)
+private val DarkPaper = Color(0xFF2B2E36)
 
-/** Desaturated and dimmed, with a slight lift so the darkest ink does not go pure black. */
-private val DarkMapFilter = ColorMatrixColorFilter(
-    ColorMatrix().apply {
-        setSaturation(0.35f)
-        postConcat(
-            ColorMatrix(
-                floatArrayOf(
-                    0.50f, 0f, 0f, 0f, 12f,
-                    0f, 0.50f, 0f, 0f, 12f,
-                    0f, 0f, 0.55f, 0f, 16f,
-                    0f, 0f, 0f, 1f, 0f,
-                )
-            )
-        )
-    }
-)
+/** The marker's ring and range colours if no temperature legend has arrived yet. */
+private const val FallbackMarkerColor = 0xFFF28C38.toInt()
 
 /**
- * The weather map: OpenStreetMap underneath, the server's overlay layers on top, centred on
- * whichever place the home screen is showing.
+ * The weather map: the field first, then the map's own ink — water, roads, borders and place
+ * names — drawn over it from OpenStreetMap's vector tiles, centred on whichever place the home
+ * screen is showing and marked there with the temperature now.
  *
  * The tiles are fetched from their sources directly — OSM's policy forbids re-serving them and a
  * proxy would put every pan through our box — but which layers exist, where their tiles are and
@@ -146,6 +132,7 @@ fun MapScreen(
     vm: MainViewModel = koinViewModel(),
     api: FosApiClient = koinInject(),
     fieldStore: WeatherFieldStore = koinInject(),
+    inkStore: InkTileStore = koinInject(),
     settings: AppSettings = koinInject(),
 ) {
     val context = LocalContext.current
@@ -165,8 +152,6 @@ fun MapScreen(
     val visible = layers.filter { it.id == "temperature" && it.legend.isNotEmpty() }
 
     val center = vm.currentLocation.value?.let { GeoPoint(it.latitude, it.longitude) }
-    val dotColor = GoogleBlue.toArgb()
-    val dotRadiusPx = with(LocalDensity.current) { 6.dp.toPx() }
 
     var mapView by remember { mutableStateOf<MapView?>(null) }
     LaunchedEffect(context) {
@@ -187,6 +172,9 @@ fun MapScreen(
                 setMultiTouchControls(true)
                 zoomController.setVisibility(CustomZoomButtonsController.Visibility.NEVER)
                 setUseDataConnection(true)
+                // No raster tiles: the map is drawn from vector tiles by an overlay, so its
+                // names can sit above the field. Off, the base overlay asks for nothing.
+                overlayManager.tilesOverlay.isEnabled = false
                 // Tiles are drawn at density scale so labels are legible and zoom levels mean
                 // the same extent on every screen.
                 setTilesScaledToDpi(true)
@@ -222,51 +210,61 @@ fun MapScreen(
         }
     }
 
-    // The raster tiles are drawn for a light UI. Inverting them is the usual trick but it turns
-    // water brown and woodland magenta; draining the colour and dimming it keeps the map readable
-    // and lets the overlays be the only saturated thing on screen.
-    LaunchedEffect(mapView, darkMap) {
-        val map = mapView ?: return@LaunchedEffect
-        map.overlayManager.tilesOverlay.apply {
-            setColorFilter(if (darkMap) DarkMapFilter else null)
-            // A missing base tile must never expose the almost-black Compose surface.
-            // This neutral map paper also passes through the same day/night filter.
-            loadingBackgroundColor = AndroidColor.rgb(224, 229, 232)
-            loadingLineColor = AndroidColor.TRANSPARENT
-        }
-    }
-
     LaunchedEffect(mapView, center) {
         val map = mapView ?: return@LaunchedEffect
-        if (center != null) {
-            map.controller.setCenter(center)
-            map.overlays.removeAll { it is HerePin }
-            map.overlays.add(HerePin(center, dotColor, AndroidColor.WHITE, dotRadiusPx))
-            map.invalidate()
-        }
+        if (center != null) map.controller.setCenter(center)
     }
 
     // The overlays wait for a centre: a field overlay asks for the chunks under the view the
     // first time it is drawn, and until the location is known that view is (0°, 0°).
-    DisposableEffect(mapView, visible, center == null) {
+    var marker by remember { mutableStateOf<LocationBubbleOverlay?>(null) }
+    val locale = context.resources.configuration.locales[0]
+    DisposableEffect(mapView, visible, center == null, darkMap) {
         val map = mapView ?: return@DisposableEffect onDispose { }
         if (center == null) return@DisposableEffect onDispose { }
         map.controller.setCenter(center)
+        var legend: TemperatureField? = null
         val overlays = visible.map { layer ->
             if (layer.scheme == "wms3857" && layer.legend.isNotEmpty()) {
-                WeatherFieldOverlay(map, FieldLayerSource(layer, TemperatureField(layer.legend)), fieldStore)
+                val field = TemperatureField(layer.legend)
+                if (legend == null) legend = field
+                WeatherFieldOverlay(map, FieldLayerSource(layer, field), fieldStore)
             } else {
                 layer.toOverlay(context, map)
             }
-        }
+        }.toMutableList()
+        // The map's own ink goes above the field, and the place marker above everything; the
+        // ink keeps its names out from under the marker.
+        val colorFor: (Float) -> Int = legend?.let { field -> { value -> field.colorFor(value) } }
+            ?: { FallbackMarkerColor }
+        val bubble = LocationBubbleOverlay(map, colorFor)
+        overlays += MapInkOverlay(map, inkStore, darkMap, locale).apply { reserved = listOf(bubble.footprint) }
+        overlays += bubble
         overlays.forEachIndexed { index, overlay -> map.overlays.add(index, overlay) }
+        marker = bubble
         map.invalidate()
         onDispose {
+            marker = null
             overlays.forEach { overlay ->
                 map.overlays.remove(overlay)
                 overlay.onDetach(map)
             }
         }
+    }
+
+    val weather = vm.weather.value
+    val today = vm.dailyWeather.value.firstOrNull()
+    val placeName = vm.currentLocation.value?.name ?: ""
+    val caption = stringResource(R.string.current_location)
+    LaunchedEffect(marker, center, weather, today, placeName, caption) {
+        val bubble = marker ?: return@LaunchedEffect
+        bubble.point = center
+        bubble.tempCelsius = weather?.tempCelsius
+        bubble.minCelsius = today?.tempMin
+        bubble.maxCelsius = today?.tempMax
+        bubble.caption = caption
+        bubble.placeName = placeName
+        mapView?.invalidate()
     }
 
     StatusBarAppearance(lightBackground = !darkMap)
@@ -290,7 +288,7 @@ fun MapScreen(
                 Modifier
                     .fillMaxSize()
                     .then(if (glassBackdrop != null) Modifier.glassBackdropSource(glassBackdrop) else Modifier)
-                    .background(if (darkMap) Color(0xFF7C7F8C) else Color(0xFFE0E5E8))
+                    .background(if (darkMap) DarkPaper else LightPaper)
             ) {
                 mapView?.let { map ->
                     AndroidView(factory = { map }, modifier = Modifier.fillMaxSize().hazeSource(hazeState))
@@ -444,29 +442,6 @@ private fun FosMapLayer.toOverlay(context: Context, map: MapView): TilesOverlay 
                 )
             )
         )
-    }
-}
-
-/** Where the home screen's location is, drawn as a dot rather than a pin. */
-private class HerePin(
-    private val point: GeoPoint,
-    dotColor: Int,
-    haloColor: Int,
-    private val radius: Float,
-) : Overlay() {
-    private val fill = Paint().apply {
-        isAntiAlias = true
-        color = dotColor
-    }
-    private val halo = Paint().apply {
-        isAntiAlias = true
-        color = haloColor
-    }
-
-    override fun draw(canvas: Canvas, projection: Projection) {
-        val screen = projection.toPixels(point, null)
-        canvas.drawCircle(screen.x.toFloat(), screen.y.toFloat(), radius * 1.5f, halo)
-        canvas.drawCircle(screen.x.toFloat(), screen.y.toFloat(), radius, fill)
     }
 }
 

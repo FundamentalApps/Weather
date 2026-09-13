@@ -27,10 +27,7 @@ class WeatherFieldOverlay(
 ) : Overlay() {
     private val paint = Paint().apply { isFilterBitmap = true }
 
-    /**
-     * The base map's names and roads are under the field, not over it as on a vector map, so
-     * the field is kept translucent enough to read them through, whatever the server suggests.
-     */
+    /** The map's ink is drawn over the field, so the field can be nearly solid; capped here. */
     private val opacity = minOf(source.layer.opacity, MaxOpacity)
     private val viewport = RectL()
     private val dst = RectF()
@@ -187,7 +184,7 @@ class WeatherFieldOverlay(
 
     private companion object {
         const val FadeMillis = 300f
-        const val MaxOpacity = 0.55f
+        const val MaxOpacity = 0.8f
 
         /** Level = floor(zoom) - this, so a chunk spans 8 to 16 density-scaled tiles. */
         const val LevelOffset = 3

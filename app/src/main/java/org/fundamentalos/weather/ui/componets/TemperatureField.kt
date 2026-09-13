@@ -96,7 +96,7 @@ class TemperatureField(legend: List<FosMapLegendStop>) {
                 val i = row + x
                 // Preserve the coverage mask; smoothing must not fabricate missing observations.
                 if (coverage[i] > 0f && weights[i] > 0f) {
-                    output[outRow + x] = colorFor(values[i] / weights[i]) or
+                    output[outRow + x] = (colorFor(values[i] / weights[i]) and 0xFFFFFF) or
                         ((coverage[i] * 255).roundToInt() shl 24)
                 }
             }
@@ -139,9 +139,10 @@ class TemperatureField(legend: List<FosMapLegendStop>) {
         }
     }
 
-    private fun colorFor(value: Float): Int {
+    /** The legend's colour for a temperature, opaque. */
+    fun colorFor(value: Float): Int {
         val index = ((value - lutMin) / LutStep).roundToInt().coerceIn(0, lut.size - 1)
-        return lut[index]
+        return lut[index] or (0xFF shl 24)
     }
 
     private fun colorAt(value: Float): Int {

@@ -3,6 +3,7 @@ package org.fundamentalos.weather.di
 import org.fundamentalos.weather.BuildConfig
 import org.fundamentalos.weather.location.SavedPlaces
 import org.fundamentalos.weather.settings.AppSettings
+import org.fundamentalos.weather.ui.map.InkTileStore
 import org.fundamentalos.weather.ui.map.WeatherFieldStore
 import org.fundamentalos.weather.viewmodel.MainViewModel
 import org.fundamentalos.weather.weather.provider.ProviderRegistry
@@ -31,6 +32,7 @@ val module = module {
     single { WeatherService(get(), get()) }
     // App-scoped so the map's field chunks survive leaving and reopening the map screen.
     single { WeatherFieldStore(androidContext()) }
+    single { InkTileStore(androidContext()) }
 
     viewModelOf(::MainViewModel)
 }
