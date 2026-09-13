@@ -38,6 +38,10 @@ class WeatherFieldOverlay(
 
     /** When each chunk was first drawn, for the fade; 0 means it was there from the start. */
     private val shownAt = HashMap<FieldChunkKey, Long>()
+
+    /** What one square of the view gets this frame: its chunk at this fade, or a stand-in. */
+    private class Slot(val key: FieldChunkKey, val bitmap: Bitmap?, val fade: Float)
+    private val slots = ArrayList<Slot>()
     private var drawnOnce = false
 
     private val arrived: () -> Unit = { map.postInvalidate() }
@@ -70,24 +74,39 @@ class WeatherFieldOverlay(
         val now = SystemClock.uptimeMillis()
         var animating = false
         var complete = true
+        var layered = false
+        slots.clear()
         for (y in firstY..lastY) for (x in firstX..lastX) {
             val key = FieldChunkKey(source.stamp, level, x, y)
             val bitmap = store.peek(key)
             if (bitmap == null) {
                 complete = false
+                layered = true
+                // Gone from memory: when it is back it fades in again.
+                shownAt.remove(key)
                 store.request(key, source)
-                drawStandIn(canvas, projection, key)
+                slots += Slot(key, null, 0f)
                 continue
             }
             val since = shownAt.getOrPut(key) { if (drawnOnce) now else 0L }
             val fade = if (since == 0L) 1f else ((now - since).toFloat() / FadeMillis).coerceIn(0f, 1f)
             if (fade < 1f) {
                 animating = true
-                // Cross-fade over what was there rather than over a hole.
-                drawStandIn(canvas, projection, key)
+                layered = true
             }
-            drawChunk(canvas, projection, bitmap, key, fade)
+            slots += Slot(key, bitmap, fade)
         }
+        // A chunk fading in over its stand-in must not add its opacity to the stand-in's, or the
+        // field flashes darker for the length of every fade. Whenever a stand-in is in play, both
+        // are drawn opaque into one layer that is then composited with the field's opacity once.
+        if (layered) canvas.saveLayerAlpha(null, (opacity * 255).roundToInt())
+        val base = if (layered) 1f else opacity
+        for (slot in slots) {
+            // Cross-fade over what was there rather than over a hole.
+            if (slot.bitmap == null || slot.fade < 1f) drawStandIn(canvas, projection, slot.key, base)
+            if (slot.bitmap != null) drawChunk(canvas, projection, slot.bitmap, slot.key, base * slot.fade)
+        }
+        if (layered) canvas.restore()
         drawnOnce = true
         if (animating) map.postInvalidateOnAnimation()
         // With the view served, warm the way out: the coarser chunks over this spot, down to the
@@ -109,9 +128,9 @@ class WeatherFieldOverlay(
      * same chunk, else the nearest ancestor from a coarser level, else whatever descendants there
      * are from the finer ones. Nothing is drawn if none of those is there yet.
      */
-    private fun drawStandIn(canvas: Canvas, projection: Projection, key: FieldChunkKey) {
+    private fun drawStandIn(canvas: Canvas, projection: Projection, key: FieldChunkKey, alpha: Float) {
         store.peekPrevious(source.layer.id, key)?.let {
-            drawChunk(canvas, projection, it, key, 1f)
+            drawChunk(canvas, projection, it, key, alpha)
             return
         }
         for (level in key.level - 1 downTo 0) {
@@ -123,24 +142,24 @@ class WeatherFieldOverlay(
             chunkRect(projection, key, clip)
             canvas.save()
             canvas.clipRect(clip)
-            drawChunk(canvas, projection, bitmap, ancestor, 1f)
+            drawChunk(canvas, projection, bitmap, ancestor, alpha)
             canvas.restore()
             return
         }
-        drawDescendants(canvas, projection, key)
+        drawDescendants(canvas, projection, key, alpha)
     }
 
     /**
      * Tiles the square of [key] with its children where they are in memory and, where one is
      * not, with that child's own descendants. Each spot is drawn once, so nothing doubles up.
      */
-    private fun drawDescendants(canvas: Canvas, projection: Projection, key: FieldChunkKey) {
+    private fun drawDescendants(canvas: Canvas, projection: Projection, key: FieldChunkKey, alpha: Float) {
         if (key.level >= MaxChunkLevel) return
         for (dy in 0..1) for (dx in 0..1) {
             val child = FieldChunkKey(key.stamp, key.level + 1, key.x * 2 + dx, key.y * 2 + dy)
             val bitmap = store.peek(child) ?: store.peekPrevious(source.layer.id, child)
-            if (bitmap != null) drawChunk(canvas, projection, bitmap, child, 1f)
-            else drawDescendants(canvas, projection, child)
+            if (bitmap != null) drawChunk(canvas, projection, bitmap, child, alpha)
+            else drawDescendants(canvas, projection, child, alpha)
         }
     }
 
@@ -159,15 +178,16 @@ class WeatherFieldOverlay(
         )
     }
 
-    private fun drawChunk(canvas: Canvas, projection: Projection, bitmap: Bitmap, key: FieldChunkKey, fade: Float) {
+    /** Draws [bitmap] over its square at [alpha], the final paint alpha for this pass. */
+    private fun drawChunk(canvas: Canvas, projection: Projection, bitmap: Bitmap, key: FieldChunkKey, alpha: Float) {
         chunkRect(projection, key, dst)
-        paint.alpha = (opacity * fade * 255).roundToInt()
+        paint.alpha = (alpha * 255).roundToInt()
         canvas.drawBitmap(bitmap, null, dst, paint)
     }
 
     private companion object {
         const val FadeMillis = 300f
-        const val MaxOpacity = 0.3f
+        const val MaxOpacity = 0.55f
 
         /** Level = floor(zoom) - this, so a chunk spans 8 to 16 density-scaled tiles. */
         const val LevelOffset = 3
