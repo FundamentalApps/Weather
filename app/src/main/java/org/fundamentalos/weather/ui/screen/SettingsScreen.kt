@@ -86,7 +86,7 @@ private data class Toggle(
 @Composable
 private fun ToggleRow(toggle: Toggle, shape: Shape) {
     PreferenceRow(shape, onClick = { toggle.onCheckedChange(!toggle.checked) }) {
-        PreferenceLabels(toggle.title, toggle.subtitle, Modifier.weight(1f))
+        PreferenceLabels(toggle.title, Modifier.weight(1f), toggle.subtitle)
         Spacer(Modifier.width(16.dp))
         Switch(checked = toggle.checked, onCheckedChange = toggle.onCheckedChange)
     }

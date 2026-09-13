@@ -33,7 +33,7 @@
     <string name="current_location">当前位置</string>
     <string name="added">已添加</string>
     <string name="back">返回</string>
-    <string name="search_places">搜索城市名或机场...</string>
+    <string name="search_places">搜索城市名或机场…</string>
     <string name="use_current_location">使用当前位置</string>
     <string name="map">地图</string>
     <string name="locations">位置列表</string>
@@ -133,7 +133,6 @@
     <string name="attribution">进一步了解%1$s和%2$s</string>
     <string name="weather_data">天气数据</string>
     <string name="map_data">地图数据</string>
-    <string name="weather_api">天气 API</string>
     <string name="color_white">白色</string>
     <string name="color_blue">蓝色</string>
     <string name="color_green">绿色</string>

@@ -1,6 +1,7 @@
 package org.fundamentalos.weather.settings
 
 import android.content.Context
+import androidx.core.content.edit
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -28,15 +29,12 @@ class AppSettings(context: Context) {
         get() = mapLayersState
         set(value) {
             mapLayersState = value
-            preferences.edit().apply {
+            preferences.edit {
                 if (value == null) remove(KeyMapLayers) else putStringSet(KeyMapLayers, value)
-            }.apply()
+            }
         }
 
-    private var mapLayersState by mutableStateOf(preferences.getStringSet(KeyMapLayers, null))
-
-
-
+    private var mapLayersState by mutableStateOf<Set<String>?>(preferences.getStringSet(KeyMapLayers, null)?.toSet())
 
     /** Compose state that writes through to preferences whenever it is assigned. */
     private fun persisted(key: String, default: Boolean) =
@@ -47,7 +45,7 @@ class AppSettings(context: Context) {
 
             override fun setValue(thisRef: Any?, property: KProperty<*>, value: Boolean) {
                 state = value
-                preferences.edit().putBoolean(key, value).apply()
+                preferences.edit { putBoolean(key, value) }
             }
         }
 

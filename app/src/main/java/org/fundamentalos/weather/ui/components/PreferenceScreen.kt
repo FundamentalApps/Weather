@@ -151,7 +151,7 @@ fun PreferenceRow(
 
 /** A row's text: what it is, and underneath, what it says. */
 @Composable
-fun PreferenceLabels(title: String, subtitle: String? = null, modifier: Modifier = Modifier) {
+fun PreferenceLabels(title: String, modifier: Modifier = Modifier, subtitle: String? = null) {
     Column(modifier) {
         Text(
             text = title,

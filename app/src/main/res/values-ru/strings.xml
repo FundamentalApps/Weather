@@ -133,7 +133,6 @@
     <string name="attribution">Подробнее: %1$s и %2$s</string>
     <string name="weather_data">данные о погоде</string>
     <string name="map_data">данные карты</string>
-    <string name="weather_api">API погоды</string>
     <string name="color_white">Белый</string>
     <string name="color_blue">Синий</string>
     <string name="color_green">Зелёный</string>

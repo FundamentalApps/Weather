@@ -71,10 +71,9 @@ fun WeatherApp() {
 
     // Pushed destinations are overlays on the home screen rather than replacements for it, so
     // coming back never rebuilds it. The motion they slide by is shared with the screen below.
-    val motion = remember { PushMotion() }
     // Whatever the restored back stack already names is already open; only a push animates.
-    remember(motion) {
-        for (depth in 1..backStack.lastIndex) motion.settle(depth)
+    val motion = remember {
+        PushMotion().apply { for (depth in 1..backStack.lastIndex) settle(depth) }
     }
     val topDepth = backStack.lastIndex
     SideEffect { motion.topDepth = topDepth }

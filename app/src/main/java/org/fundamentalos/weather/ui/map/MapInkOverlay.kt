@@ -10,6 +10,8 @@ import android.graphics.Typeface
 import android.os.Build
 import android.os.SystemClock
 import android.util.LruCache
+import androidx.core.graphics.createBitmap
+import androidx.core.graphics.withClip
 import org.osmdroid.util.RectL
 import org.osmdroid.util.TileSystem
 import org.osmdroid.views.MapView
@@ -180,14 +182,13 @@ class MapInkOverlay(
         nearestSetAbove(key)?.let { (aboveKey, above) ->
             val clip = RectF()
             tileRect(projection, key, clip)
-            canvas.save()
-            canvas.clipRect(clip)
-            for ((childKey, _) in below) {
-                tileRect(projection, childKey, tileRect)
-                canvas.clipOut(tileRect)
+            canvas.withClip(clip) {
+                for ((childKey, _) in below) {
+                    tileRect(projection, childKey, tileRect)
+                    clipOut(tileRect)
+                }
+                drawTile(this, projection, aboveKey, above, key.zoom, clipTo = clip)
             }
-            drawTile(canvas, projection, aboveKey, above, key.zoom, clipTo = clip)
-            canvas.restore()
         }
         for ((childKey, child) in below) drawTile(canvas, projection, childKey, child, key.zoom, clipTo = null)
     }
@@ -307,7 +308,7 @@ class MapInkOverlay(
         val pad = 4f * density
         val width = (textPaint.measureText(text) + haloPaint.strokeWidth + pad * 2).toInt().coerceAtLeast(1)
         val height = (size * 1.3f + haloPaint.strokeWidth + pad * 2).toInt().coerceAtLeast(1)
-        val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+        val bitmap = createBitmap(width, height)
         val canvas = Canvas(bitmap)
         val baseline = height / 2f + size * 0.36f
         canvas.drawText(text, width / 2f, baseline, haloPaint)

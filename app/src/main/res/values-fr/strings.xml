@@ -133,7 +133,6 @@
     <string name="attribution">En savoir plus sur les %1$s et les %2$s</string>
     <string name="weather_data">données météo</string>
     <string name="map_data">données cartographiques</string>
-    <string name="weather_api">API météo</string>
     <string name="color_white">Blanc</string>
     <string name="color_blue">Bleu</string>
     <string name="color_green">Vert</string>

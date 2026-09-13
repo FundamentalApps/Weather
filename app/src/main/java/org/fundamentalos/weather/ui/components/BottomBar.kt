@@ -45,7 +45,7 @@ import dev.chrisbanes.haze.hazeEffect
 import com.kyant.shapes.RoundedRectangle
 import com.kyant.shapes.Capsule
 import org.fundamentalos.weather.ui.LocalHazeState
-import org.fundamentalos.weather.ui.theme.WeatherHazeStyle
+import org.fundamentalos.weather.ui.theme.weatherHazeStyle
 import org.fundamentalos.weather.ui.theme.PreviewThemeWithBg
 import org.fundamentalos.weather.viewmodel.MainViewModel
 
@@ -65,7 +65,7 @@ fun BottomBar(
     onLocationListClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val hazeStyle = WeatherHazeStyle()
+    val hazeStyle = weatherHazeStyle()
     val overlayColor = hazeStyle.tints.firstOrNull()?.color ?: Color.Transparent
     val overlayBrush = Brush.verticalGradient(
         0f to overlayColor.copy(alpha = 0f),
@@ -157,7 +157,7 @@ private fun GlassButton(
     onClick: () -> Unit,
     content: @Composable () -> Unit
 ) {
-    val hazeStyle = WeatherHazeStyle()
+    val hazeStyle = weatherHazeStyle()
     val outlineColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.15f)
 
     Surface(

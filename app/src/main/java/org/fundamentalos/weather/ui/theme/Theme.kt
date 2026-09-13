@@ -546,7 +546,7 @@ val unspecified_scheme = ColorFamily(
 )
 
 @Composable
-fun WeatherHazeStyle(
+fun weatherHazeStyle(
     containerColor: Color = if (isSystemInDarkTheme()) {
         MaterialTheme.colorScheme.surfaceColorAtElevation(1.dp)
     } else {

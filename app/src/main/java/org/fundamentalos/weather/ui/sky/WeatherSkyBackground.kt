@@ -29,6 +29,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.lifecycle.Lifecycle
@@ -159,8 +160,9 @@ fun WeatherSkyBackground(
     val sceneState = smoothSky(sky, running)
     val time = rememberSkyTime(running)
     // Decode to <= 627px on this asset: modest texture memory, detail remains below cloud scale.
-    val bitmap = remember(context.resources) {
-        BitmapFactory.decodeResource(context.resources, R.drawable.sky_cloud_density,
+    val resources = LocalResources.current
+    val bitmap = remember(resources) {
+        BitmapFactory.decodeResource(resources, R.drawable.sky_cloud_density,
             BitmapFactory.Options().apply { inScaled = false; inSampleSize = 2 })
     }
     Box(modifier.fillMaxSize().clipToBounds()) {

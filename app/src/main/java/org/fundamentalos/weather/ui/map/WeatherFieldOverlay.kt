@@ -2,6 +2,7 @@ package org.fundamentalos.weather.ui.map
 
 import android.graphics.Bitmap
 import android.graphics.Canvas
+import androidx.core.graphics.withClip
 import android.graphics.Paint
 import android.graphics.RectF
 import android.os.SystemClock
@@ -137,10 +138,7 @@ class WeatherFieldOverlay(
             // The ancestor is larger than the square; clip so the layer's opacity is not doubled
             // where a neighbour is already drawn.
             chunkRect(projection, key, clip)
-            canvas.save()
-            canvas.clipRect(clip)
-            drawChunk(canvas, projection, bitmap, ancestor, alpha)
-            canvas.restore()
+            canvas.withClip(clip) { drawChunk(this, projection, bitmap, ancestor, alpha) }
             return
         }
         drawDescendants(canvas, projection, key, alpha)

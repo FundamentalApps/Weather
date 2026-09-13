@@ -26,7 +26,7 @@ fun DataSourcesScreen(onBackClick: () -> Unit, modifier: Modifier = Modifier) {
     PreferenceScreen(title = stringResource(R.string.data_sources), onBack = onBackClick, modifier = modifier) {
         PreferenceGroup(sources.size) { index, shape ->
             val (name, credit) = sources[index]
-            PreferenceRow(shape) { PreferenceLabels(name, credit) }
+            PreferenceRow(shape) { PreferenceLabels(name, subtitle = credit) }
         }
     }
 }

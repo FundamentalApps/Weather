@@ -9,6 +9,7 @@ import android.graphics.Path
 import android.os.SystemClock
 import android.util.Log
 import android.util.LruCache
+import androidx.core.graphics.createBitmap
 import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
@@ -264,7 +265,7 @@ object InkRenderer {
         val scale = size.toFloat() / InkTile.Extent
         val width = style.density * WidthAtSetSize / scale
         fun mask(draw: (Canvas, Paint) -> Unit): Bitmap {
-            val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ALPHA_8)
+            val bitmap = createBitmap(size, size, Bitmap.Config.ALPHA_8)
             val canvas = Canvas(bitmap)
             canvas.scale(scale, scale)
             // Tiles carry a margin of their neighbours' geometry; without the clip it is drawn twice.

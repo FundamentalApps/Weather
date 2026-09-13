@@ -27,12 +27,12 @@ fun AboutScreen(onBackClick: () -> Unit, modifier: Modifier = Modifier) {
         PreferenceSectionHeader(stringResource(R.string.general))
         PreferenceGroup(general.size) { index, shape ->
             val (name, value) = general[index]
-            PreferenceRow(shape) { PreferenceLabels(name, value) }
+            PreferenceRow(shape) { PreferenceLabels(name, subtitle = value) }
         }
 
         PreferenceSectionHeader(stringResource(R.string.credits))
         PreferenceGroup(1) { _, shape ->
-            PreferenceRow(shape) { PreferenceLabels(stringResource(R.string.provider), "Fundamental OS") }
+            PreferenceRow(shape) { PreferenceLabels(stringResource(R.string.provider), subtitle = "Fundamental OS") }
         }
     }
 }

@@ -1,6 +1,7 @@
 package org.fundamentalos.weather.location
 
 import android.content.Context
+import androidx.core.content.edit
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -81,7 +82,7 @@ class SavedPlaces(context: Context) {
     }
 
     private fun write() {
-        preferences.edit().putString(KeyPlaces, json.encodeToString(places)).apply()
+        preferences.edit { putString(KeyPlaces, json.encodeToString(places)) }
     }
 
     private companion object {

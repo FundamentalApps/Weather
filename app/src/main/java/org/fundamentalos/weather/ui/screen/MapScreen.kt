@@ -42,6 +42,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -55,7 +56,7 @@ import org.fundamentalos.weather.BuildConfig
 import org.fundamentalos.weather.settings.AppSettings
 import org.fundamentalos.weather.ui.components.AppleWeatherConditionTextMaterial
 import org.fundamentalos.weather.ui.components.AppleWeatherConditionTextMaterialLight
-import org.fundamentalos.weather.ui.components.BlurOnlyHazeStyle
+import org.fundamentalos.weather.ui.components.blurOnlyHazeStyle
 import org.fundamentalos.weather.ui.components.GlassTopAppBar
 import org.fundamentalos.weather.ui.components.LocalGlassBackdrop
 import org.fundamentalos.weather.ui.components.StatusBarAppearance
@@ -246,7 +247,7 @@ fun MapScreen(
     // The overlays wait for a centre: a field overlay asks for the chunks under the view the
     // first time it is drawn, and until the location is known that view is (0°, 0°).
     var marker by remember { mutableStateOf<LocationBubbleOverlay?>(null) }
-    val locale = context.resources.configuration.locales[0]
+    val locale = LocalConfiguration.current.locales[0]
     // The field is coloured with the forecast's own temperature palette, unharmonised: a field
     // is read against the legend, so its colours must be the same on every device.
     val palette = TemperaturePalette
@@ -413,7 +414,7 @@ private fun LegendCard(
             // the card across the screen.
             .width(112.dp)
             .clip(RoundedRectangle(20.dp))
-            .hazeEffect(hazeState, BlurOnlyHazeStyle())
+            .hazeEffect(hazeState, blurOnlyHazeStyle())
             .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.55f))
             .padding(horizontal = 14.dp, vertical = 12.dp),
     ) {

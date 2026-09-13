@@ -133,7 +133,6 @@
     <string name="attribution">Mehr über %1$s und %2$s erfahren</string>
     <string name="weather_data">Wetterdaten</string>
     <string name="map_data">Kartendaten</string>
-    <string name="weather_api">Wetter-API</string>
     <string name="color_white">Weiß</string>
     <string name="color_blue">Blau</string>
     <string name="color_green">Grün</string>

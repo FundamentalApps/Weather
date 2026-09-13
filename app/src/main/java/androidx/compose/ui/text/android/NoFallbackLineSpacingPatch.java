@@ -1,11 +1,15 @@
 package androidx.compose.ui.text.android;
 
+import android.annotation.SuppressLint;
 import android.os.Build;
 import android.text.StaticLayout;
 import android.util.Log;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 
+/** Reaches into Compose's text internals and, as a last resort, Unsafe: both on purpose. */
+@androidx.annotation.OptIn(markerClass = InternalPlatformTextApi.class)
+@SuppressLint("DiscouragedPrivateApi")
 public final class NoFallbackLineSpacingPatch {
     private static final String TAG = "NoFallbackTextPatch";
 

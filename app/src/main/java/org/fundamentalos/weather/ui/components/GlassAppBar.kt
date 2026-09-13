@@ -40,7 +40,7 @@ import dev.chrisbanes.haze.HazeInputScale
 import dev.chrisbanes.haze.HazeProgressive
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeEffect
-import org.fundamentalos.weather.ui.theme.WeatherHazeStyle
+import org.fundamentalos.weather.ui.theme.weatherHazeStyle
 
 /** The bar a screen's content scrolls under. */
 val AppBarHeight = 64.dp
@@ -90,8 +90,8 @@ fun Modifier.collapsingTitleAnchor(state: CollapsingTitle): Modifier =
 
 /** Blur with nothing added on top: a tint would read as a bar across the content. */
 @Composable
-fun BlurOnlyHazeStyle() =
-    WeatherHazeStyle().copy(tints = emptyList(), backgroundColor = Color.Transparent)
+fun blurOnlyHazeStyle() =
+    weatherHazeStyle().copy(tints = emptyList(), backgroundColor = Color.Transparent)
 
 /**
  * Full blur against the top edge of the screen, gone by the bottom of the bar.
@@ -152,7 +152,7 @@ fun GlassTopAppBar(
     /** Whether the content passing under the bar is frosted; a map keeps its edge sharp. */
     blur: Boolean = true,
 ) {
-    val style = BlurOnlyHazeStyle()
+    val style = blurOnlyHazeStyle()
     val height = WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + AppBarHeight
     Box(modifier.fillMaxWidth()) {
         // The blur is its own box: hung on the bar itself it takes the bar's measured bounds,

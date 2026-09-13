@@ -1,6 +1,7 @@
 package org.fundamentalos.weather.weather.settings
 
 import android.content.Context
+import androidx.core.content.edit
 import org.fundamentalos.weather.weather.provider.ProviderRegistry
 
 class ProviderSettingsRepository(context: Context) {
@@ -10,13 +11,13 @@ class ProviderSettingsRepository(context: Context) {
         get() = preferences.getString(KEY_SELECTED_PROVIDER, ProviderRegistry.FundamentalOsProviderId)
             ?: ProviderRegistry.FundamentalOsProviderId
         set(value) {
-            preferences.edit().putString(KEY_SELECTED_PROVIDER, value).apply()
+            preferences.edit { putString(KEY_SELECTED_PROVIDER, value) }
         }
 
     var fallbackEnabled: Boolean
         get() = preferences.getBoolean(KEY_FALLBACK_ENABLED, true)
         set(value) {
-            preferences.edit().putBoolean(KEY_FALLBACK_ENABLED, value).apply()
+            preferences.edit { putBoolean(KEY_FALLBACK_ENABLED, value) }
         }
 
     companion object {

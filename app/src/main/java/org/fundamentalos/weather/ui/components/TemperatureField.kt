@@ -3,6 +3,7 @@ package org.fundamentalos.weather.ui.components
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Color
+import androidx.core.graphics.toColorInt
 import org.fundamentalos.weather.weather.provider.fos.FosMapLegendStop
 import java.io.InputStream
 import kotlin.math.roundToInt
@@ -18,7 +19,7 @@ import kotlin.math.roundToInt
  */
 class TemperatureField(legend: List<FosMapLegendStop>, palette: List<Pair<Float, Int>>) {
     private val stops = legend.sortedBy { it.value }
-    private val colors = IntArray(stops.size) { Color.parseColor("#" + stops[it].color.removePrefix("#")) }
+    private val colors = IntArray(stops.size) { ("#" + stops[it].color.removePrefix("#")).toColorInt() }
     private val degrees = FloatArray(stops.size) { stops[it].value }
 
     private val paletteStops = palette.sortedBy { it.first }

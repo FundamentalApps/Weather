@@ -81,7 +81,7 @@ import org.fundamentalos.weather.ui.components.CollapsingLargeTitle
 import org.fundamentalos.weather.ui.components.CollapsingTitle
 import org.fundamentalos.weather.ui.components.rememberCollapsingTitle
 import org.fundamentalos.weather.ui.components.AppBarIconAlignmentPad
-import org.fundamentalos.weather.ui.components.BlurOnlyHazeStyle
+import org.fundamentalos.weather.ui.components.blurOnlyHazeStyle
 import org.fundamentalos.weather.ui.components.GlassTopAppBar
 import org.fundamentalos.weather.ui.components.StatusBarAppearance
 import org.fundamentalos.weather.ui.components.topEdgeBlur
@@ -356,7 +356,7 @@ private fun SearchResultsLayer(
     modifier: Modifier = Modifier,
 ) {
     val hazeState = remember { HazeState() }
-    val hazeStyle = BlurOnlyHazeStyle()
+    val hazeStyle = blurOnlyHazeStyle()
     Box(modifier.fillMaxSize()) {
         val listState = rememberLazyListState()
         val overscrollState = rememberIosOverscrollState()

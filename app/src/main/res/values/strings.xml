@@ -133,7 +133,6 @@
     <string name="attribution">Learn more about %1$s and %2$s</string>
     <string name="weather_data">weather data</string>
     <string name="map_data">map data</string>
-    <string name="weather_api">Weather API</string>
     <string name="color_white">White</string>
     <string name="color_blue">Blue</string>
     <string name="color_green">Green</string>
