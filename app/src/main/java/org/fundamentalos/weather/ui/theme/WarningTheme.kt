@@ -13,7 +13,7 @@ fun warningColorScheme(): WarningColorScheme =
     if (isSystemInDarkTheme()) warningDark else warningLight
 
 /**
- * Resolve a QWeather `severityColor` value (White/Blue/Green/Yellow/Orange/Red/Black) to a
+ * Resolve a `severityColor` value (White/Blue/Green/Yellow/Orange/Red/Black) to a
  * [ColorFamily]. Unknown / missing values fall back to Blue.
  */
 @Composable

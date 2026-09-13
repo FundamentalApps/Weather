@@ -9,9 +9,6 @@ import org.fundamentalos.weather.weather.provider.WeatherProvider
 import org.fundamentalos.weather.weather.provider.WeatherService
 import org.fundamentalos.weather.weather.provider.fos.FosApiClient
 import org.fundamentalos.weather.weather.provider.fos.FundamentalOsWeatherProvider
-import org.fundamentalos.weather.weather.provider.qweather.QWeatherApiClient
-import org.fundamentalos.weather.weather.provider.qweather.QWeatherCredentialStore
-import org.fundamentalos.weather.weather.provider.qweather.QWeatherProvider
 import org.fundamentalos.weather.weather.settings.ProviderSettingsRepository
 import org.koin.android.ext.koin.androidContext
 import org.koin.core.module.dsl.viewModelOf
@@ -25,15 +22,8 @@ val module = module {
         val context = androidContext()
         FosApiClient(BuildConfig.FOS_API_BASE_URL) { context.resources.configuration.locales[0] }
     }
-    single { QWeatherCredentialStore(androidContext()) }
-    single {
-        val context = androidContext()
-        QWeatherApiClient(locale = { context.resources.configuration.locales[0] })
-    }
-
-    // FundamentalOS is the default; QWeather stays as a bring-your-own-key option.
+    // FundamentalOS is the only weather provider.
     single { FundamentalOsWeatherProvider(get()) } bind WeatherProvider::class
-    single { QWeatherProvider(get(), get()) } bind WeatherProvider::class
 
     single { ProviderRegistry(getAll<WeatherProvider>().distinctBy { it.id }) }
     single { ProviderSettingsRepository(androidContext()) }

@@ -10,7 +10,7 @@ import androidx.compose.ui.res.painterResource
 import org.fundamentalos.weather.R
 
 /**
- * Map a QWeather `typeName` to one of the existing warning drawables. Keyword match is
+ * Map a warning `typeName` to one of the existing warning drawables. Keyword match is
  * substring-based; the order below matters — more specific keywords (e.g. 雷暴大风) must come
  * before looser ones (大风) so they win.
  */

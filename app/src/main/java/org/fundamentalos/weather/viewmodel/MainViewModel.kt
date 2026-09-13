@@ -359,9 +359,7 @@ private fun DailyForecast.toDailyWeatherInfo(): DailyWeatherInfo {
     )
 }
 
-/**
- * https://dev.qweather.com/docs/resource/icons/
- */
+/** Icon-code map: the shared numeric weather codes each map to a layered icon. */
 private val dayMaps = mapOf<String, () -> MultilayerIcon>(
     "100" to { WeatherIcons.Clear },
     "101" to { WeatherIcons.MostlyCloudy },

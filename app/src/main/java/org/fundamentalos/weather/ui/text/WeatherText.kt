@@ -1,13 +1,11 @@
 package org.fundamentalos.weather.ui.text
 
-import android.content.res.Resources
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import org.fundamentalos.weather.R
-import org.fundamentalos.weather.weather.provider.ProviderRegistry
 import java.text.NumberFormat
 import java.time.LocalDate
 import java.time.LocalTime
@@ -93,11 +91,6 @@ fun localizedWarningTime(instant: Instant): String {
     return "$day $time"
 }
 
-fun providerDisplayName(resources: Resources, id: String, fallback: String): String = when (id) {
-    ProviderRegistry.QWeatherProviderId -> resources.getString(R.string.qweather_direct)
-    else -> fallback
-}
-
 @Composable
 fun windDirectionText(degree: Int?, fallback: String = "--"): String {
     if (degree == null) return fallback
@@ -107,7 +100,7 @@ fun windDirectionText(degree: Int?, fallback: String = "--"): String {
     return stringResource(directions[((normalized + 22.5) / 45).toInt() % 8])
 }
 
-/** QWeather-compatible codes are shared by all providers, so labels do not depend on server language. */
+/** Condition codes are shared by all providers, so labels do not depend on server language. */
 @Composable
 fun conditionText(code: String, fallback: String = ""): String {
     val range = conditionRanges[code]

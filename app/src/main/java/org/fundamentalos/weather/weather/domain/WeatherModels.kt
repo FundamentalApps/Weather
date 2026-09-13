@@ -112,7 +112,7 @@ enum class WarningSeverity {
     Cancel, None, Unknown, Standard, Minor, Moderate, Major, Severe, Extreme;
 
     companion object {
-        fun fromQWeather(value: String?): WarningSeverity {
+        fun fromSeverityColor(value: String?): WarningSeverity {
             if (value.isNullOrBlank()) return Unknown
             return entries.firstOrNull { it.name.equals(value, ignoreCase = true) } ?: Unknown
         }

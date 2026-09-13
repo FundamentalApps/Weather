@@ -17,6 +17,5 @@ class ProviderRegistry(
 
     companion object {
         const val FundamentalOsProviderId = "fundamentalos"
-        const val QWeatherProviderId = "qweather"
     }
 }

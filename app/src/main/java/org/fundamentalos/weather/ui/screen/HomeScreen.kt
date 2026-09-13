@@ -96,7 +96,6 @@ import org.fundamentalos.weather.ui.componets.SunArc
 import org.fundamentalos.weather.ui.componets.parseClockMinutes
 import org.fundamentalos.weather.ui.componets.WeatherIcons
 import org.fundamentalos.weather.ui.componets.WeatherWarningsSection
-import org.fundamentalos.weather.ui.settings.ProviderSettingsDialog
 import org.fundamentalos.weather.ui.theme.PreviewTheme
 import org.fundamentalos.weather.ui.theme.PreviewThemeWithBg
 import org.fundamentalos.weather.ui.theme.weatherVisualScheme
