@@ -98,6 +98,8 @@ fun Banner(
     scrollState: ScrollState,
     modifier: Modifier = Modifier,
     overscroll: IosOverscrollState? = null,
+    /** Whether the headline is arriving — rolling in — rather than already there. */
+    enter: Boolean = false,
 ) {
     val density = LocalDensity.current
     // The headline travels 1:1 with the content: it is fully collapsed exactly when the space the
@@ -149,10 +151,11 @@ fun Banner(
                     translationX = centred * f
                 },
         ) {
-            NoFallbackText(
+            BlurRollText(
                 text = "$temperature°",
                 style = MaterialTheme.typography.displayLarge.copy(fontSize = TemperatureSize),
                 color = onSurface,
+                enter = enter,
             )
             // The separator belongs to the collapsed form only.
             Box(
@@ -176,7 +179,7 @@ fun Banner(
                     color = onSurface.copy(alpha = 0.4f),
                 )
             }
-            NoFallbackText(
+            BlurRollText(
                 text = text,
                 modifier = Modifier
                     .graphicsLayer {
@@ -194,6 +197,7 @@ fun Banner(
                     fontWeight = FontWeight.Medium,
                 ),
                 color = if (glass) Color.White else onSurface.copy(alpha = 0.75f),
+                enter = enter,
             )
         }
     }

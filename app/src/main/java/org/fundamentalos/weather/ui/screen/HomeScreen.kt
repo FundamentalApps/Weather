@@ -7,9 +7,24 @@ import org.fundamentalos.weather.ui.text.localizedNumber
 import androidx.compose.ui.res.stringResource
 import android.os.Build
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.FastOutLinearInEasing
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.withFrameNanos
+import org.fundamentalos.weather.ui.componets.DailyWeatherInfo
+import org.fundamentalos.weather.ui.componets.FlowerLoadingIndicator
+import org.fundamentalos.weather.ui.componets.HourlyWeatherInfo
+import org.fundamentalos.weather.weather.domain.AirQuality
+import org.fundamentalos.weather.weather.domain.CurrentWeather
+import org.fundamentalos.weather.weather.domain.DailyForecast
+import org.fundamentalos.weather.weather.domain.MinutelyPrecipitation
+import org.fundamentalos.weather.weather.domain.WeatherWarning
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.layout.Arrangement
@@ -119,6 +134,45 @@ fun HomeScreen(
     val locations = vm.currentLocation.value?.let { listOf(LocationItem(it.name, it.cityId)) }
         ?: listOf(LocationItem(stringResource(vm.locationLabel), ""))
 
+    // The page shows one reading at a time and changes it as a whole: the cards fade down, the
+    // reading changes underneath, and they fade back up showing the new one, while the headline
+    // rolls to its new figures. The first reading arrives differently: the flower that stood in
+    // for it goes, and the headline and the cards come up, one after another.
+    val incoming = homeContent(vm)
+    var displayed by remember { mutableStateOf(incoming) }
+    var entered by remember { mutableStateOf(false) }
+    val contentAlpha = remember { Animatable(1f) }
+    val enter = remember { Animatable(if (incoming == null) 0f else 1f) }
+    val indicatorAlpha = remember { Animatable(if (incoming == null) 1f else 0f) }
+    val latest = rememberUpdatedState(incoming)
+    // Readings are taken up one at a time, each change waiting for the one before it to finish:
+    // the first readings can come a second apart, as the device's own location follows the
+    // network's, and a change cutting the entrance short would leave it half done.
+    LaunchedEffect(Unit) {
+        snapshotFlow { latest.value }.collect { next ->
+            if (next == null) return@collect
+            val shown = displayed
+            when {
+                shown == null -> {
+                    indicatorAlpha.animateTo(0f, tween(IndicatorLeaveMillis, easing = FastOutLinearInEasing))
+                    entered = true
+                    displayed = next
+                    // The frame that first composes and draws the cards is a long one; the
+                    // entrance starts after it, on the same frame as the headline's roll,
+                    // and gives the headline a moment's lead.
+                    withFrameNanos { }
+                    withFrameNanos { }
+                    enter.animateTo(1f, tween(EnterMillis, delayMillis = EnterLeadMillis, easing = LinearEasing))
+                }
+                shown != next -> {
+                    contentAlpha.animateTo(0f, tween(SwapOutMillis, easing = FastOutLinearInEasing))
+                    displayed = next
+                    contentAlpha.animateTo(1f, tween(SwapInMillis, easing = FastOutSlowInEasing))
+                }
+            }
+        }
+    }
+
     Box {
         val hazeState = remember { HazeState() }
         val scrollState = rememberScrollState()
@@ -131,8 +185,9 @@ fun HomeScreen(
             val visualScheme = weatherVisualScheme(
                 current = vm.weather.value,
                 dailyForecast = vm.dailyForecast.value,
-                latitude = vm.currentLocation.value?.latitude,
-                longitude = vm.currentLocation.value?.longitude,
+                // Before the weather is known, the device's own place puts the sun where it is.
+                latitude = (vm.currentLocation.value ?: vm.deviceLocation.value)?.latitude,
+                longitude = (vm.currentLocation.value ?: vm.deviceLocation.value)?.longitude,
                 now = skyWallTime,
             )
             val baseColorScheme = MaterialTheme.colorScheme
@@ -239,69 +294,83 @@ fun HomeScreen(
                                 )
                                 .padding(bottom = 106.dp)
                                 .navigationBarsPadding()
+                                .graphicsLayer {
+                                    val a = contentAlpha.value
+                                    alpha = a
+                                    // Sinks a little as it fades, and rises back with the new reading.
+                                    translationY = (1f - a) * SwapDrop.toPx()
+                                }
                         ) {
-                            vm.weather.value?.let { weather ->
+                            displayed?.let { content ->
+                                val weather = content.weather
+                                val today = content.today
+                                var order = 0
                                 // The clip window already accounts for the pinned headline.
                                 Spacer(Modifier.height(BannerScrollReserve))
 
                                 Spacer(Modifier.height(28.dp))
 
-                                val today = vm.dailyForecast.value.firstOrNull()
-
-                                QuickInfoCard(
-                                    feelsLike = weather.feelsLikeCelsius.toString(),
-                                    maxTemp = vm.dailyWeather.value.firstOrNull()?.tempMax?.toString() ?: "--",
-                                    minTemp = vm.dailyWeather.value.firstOrNull()?.tempMin?.toString() ?: "--",
-                                    windDirection = windDirectionText(weather.windDegree, weather.windDirection),
-                                    windScale = weather.windScale,
-                                )
+                                Entering(enter, order++) {
+                                    QuickInfoCard(
+                                        feelsLike = weather.feelsLikeCelsius.toString(),
+                                        maxTemp = content.daily.firstOrNull()?.tempMax?.toString() ?: "--",
+                                        minTemp = content.daily.firstOrNull()?.tempMin?.toString() ?: "--",
+                                        windDirection = windDirectionText(weather.windDegree, weather.windDirection),
+                                        windScale = weather.windScale,
+                                    )
+                                }
 
                                 Spacer(Modifier.height(16.dp))
 
-                                if (vm.warnings.value.isNotEmpty()) {
-                                    WeatherWarningsSection(vm.warnings.value)
+                                if (content.warnings.isNotEmpty()) {
+                                    Entering(enter, order++) { WeatherWarningsSection(content.warnings) }
                                     Spacer(Modifier.height(16.dp))
                                 }
 
-                                vm.minutelyPrecipitation.value?.let {
-                                    PrecipitationCard(it)
+                                content.minutely?.let {
+                                    Entering(enter, order++) { PrecipitationCard(it) }
                                     Spacer(Modifier.height(16.dp))
                                 }
 
-                                vm.aqi.value?.let {
-                                    AirQualityCard(it.aqi, it.level, it.effect ?: it.category.orEmpty())
+                                content.aqi?.let {
+                                    Entering(enter, order++) {
+                                        AirQualityCard(it.aqi, it.level, it.effect ?: it.category.orEmpty())
+                                    }
                                 }
 
                                 Spacer(Modifier.height(16.dp))
 
-                                if(vm.hourlyWeather.value.isNotEmpty()) {
-                                    HourlyWeatherCard(Modifier.fillMaxWidth(), vm.hourlyWeather.value)
+                                if (content.hourly.isNotEmpty()) {
+                                    Entering(enter, order++) { HourlyWeatherCard(Modifier.fillMaxWidth(), content.hourly) }
                                 }
 
                                 Spacer(Modifier.height(16.dp))
 
-                                if (vm.dailyWeather.value.isNotEmpty()) { // TODO: Loading animation
-                                    DailyWeatherCard(Modifier.fillMaxWidth(), vm.dailyWeather.value)
+                                if (content.daily.isNotEmpty()) {
+                                    Entering(enter, order++) { DailyWeatherCard(Modifier.fillMaxWidth(), content.daily) }
                                 }
 
                                 Spacer(Modifier.height(16.dp))
 
-                                WindCard(
-                                    speedKph = weather.windSpeedKph,
-                                    gustKph = weather.windGustKph,
-                                    direction = windDirectionText(weather.windDegree, weather.windDirection),
-                                    degree = weather.windDegree,
-                                    modifier = Modifier.fillMaxWidth(),
-                                )
+                                Entering(enter, order++) {
+                                    WindCard(
+                                        speedKph = weather.windSpeedKph,
+                                        gustKph = weather.windGustKph,
+                                        direction = windDirectionText(weather.windDegree, weather.windDirection),
+                                        degree = weather.windDegree,
+                                        modifier = Modifier.fillMaxWidth(),
+                                    )
+                                }
 
                                 Spacer(Modifier.height(16.dp))
 
                                 today?.let {
-                                    MoonCard(it.date, Modifier.fillMaxWidth())
+                                    Entering(enter, order++) { MoonCard(it.date, Modifier.fillMaxWidth()) }
 
                                     Spacer(Modifier.height(16.dp))
                                 }
 
+                                Entering(enter, order++) {
                                 DetailGrid(
                                     items = buildList {
                                         // Whichever comes next leads, with the other underneath and
@@ -400,31 +469,49 @@ fun HomeScreen(
                                     },
                                     modifier = Modifier.fillMaxWidth(),
                                 )
+                                }
 
                                 Spacer(Modifier.height(16.dp))
 
                                 vm.currentLocation.value?.let { location ->
-                                    LocationFooter(
-                                        country = countryDisplayName(location.country),
-                                        province = location.province,
-                                        city = location.city,
-                                        place = location.name,
-                                        modifier = Modifier.padding(top = 8.dp, bottom = 8.dp),
-                                    )
+                                    Entering(enter, order++) {
+                                        LocationFooter(
+                                            country = countryDisplayName(location.country),
+                                            province = location.province,
+                                            city = location.city,
+                                            place = location.name,
+                                            modifier = Modifier.padding(top = 8.dp, bottom = 8.dp),
+                                        )
+                                    }
                                 }
                             }
                         }
                         }
+                        // Stands in for the first reading, where the cards will be, and goes as
+                        // they come; a failed request leaves nothing turning for nothing.
+                        if (displayed == null && vm.weatherStatus.value != MainViewModel.WeatherStatus.Error) {
+                            FlowerLoadingIndicator(
+                                Modifier
+                                    .align(Alignment.Center)
+                                    .graphicsLayer {
+                                        val a = indicatorAlpha.value
+                                        alpha = a
+                                        scaleX = 0.8f + 0.2f * a
+                                        scaleY = 0.8f + 0.2f * a
+                                    },
+                            )
+                        }
                         }
                     }
 
-                    vm.weather.value?.let { weather ->
+                    displayed?.let { content ->
                         Banner(
-                            temperature = weather.tempCelsius.toString(),
-                            text = conditionText(weather.condition.iconCode, weather.condition.text),
+                            temperature = content.weather.tempCelsius.toString(),
+                            text = conditionText(content.weather.condition.iconCode, content.weather.condition.text),
                             scrollState = scrollState,
                             modifier = Modifier.align(Alignment.TopCenter).padding(start = 12.dp),
                             overscroll = overscrollState,
+                            enter = entered,
                         )
                     }
 
@@ -451,6 +538,66 @@ fun HomeScreen(
 
     }
 }
+
+/**
+ * One reading of the page, taken from the view model in one go so that it changes as a whole.
+ * Two readings that say the same are the same reading: a refresh that changes nothing shows
+ * nothing changing. The place is not part of it — it is named below the cards from the view
+ * model itself, and forgetting it, as handing the page back to the device's location does, is
+ * not a new reading.
+ */
+private data class HomeContent(
+    val weather: CurrentWeather,
+    val today: DailyForecast?,
+    val daily: List<DailyWeatherInfo>,
+    val warnings: List<WeatherWarning>,
+    val minutely: MinutelyPrecipitation?,
+    val aqi: AirQuality?,
+    val hourly: List<HourlyWeatherInfo>,
+)
+
+private fun homeContent(vm: MainViewModel): HomeContent? {
+    val weather = vm.weather.value ?: return null
+    return HomeContent(
+        weather = weather,
+        today = vm.dailyForecast.value.firstOrNull(),
+        daily = vm.dailyWeather.value,
+        warnings = vm.warnings.value,
+        minutely = vm.minutelyPrecipitation.value,
+        aqi = vm.aqi.value,
+        hourly = vm.hourlyWeather.value,
+    )
+}
+
+/**
+ * Brings a card up in its turn as the first reading arrives: it fades in and rises a little, a
+ * beat after the card above it. Once [enter] has run its course this is a plain box.
+ */
+@Composable
+private fun Entering(enter: Animatable<Float, *>, index: Int, content: @Composable () -> Unit) {
+    Box(
+        Modifier.graphicsLayer {
+            val t = ((enter.value * EnterMillis - index * EnterStaggerMillis) / EnterCardMillis).coerceIn(0f, 1f)
+            val e = FastOutSlowInEasing.transform(t)
+            alpha = e
+            translationY = (1f - e) * EnterRise.toPx()
+        },
+    ) { content() }
+}
+
+/** The whole entrance, long enough for a dozen cards to have come up. */
+private const val EnterMillis = 1500
+/** How long the headline has the page to itself before the first card starts up. */
+private const val EnterLeadMillis = 150
+/** How long after the card above it a card starts up. */
+private const val EnterStaggerMillis = 70
+/** How long one card takes to come up. */
+private const val EnterCardMillis = 560
+private val EnterRise = 28.dp
+private const val IndicatorLeaveMillis = 220
+private const val SwapOutMillis = 180
+private const val SwapInMillis = 380
+private val SwapDrop = 8.dp
 
 /** UV index bands as published by the WMO. */
 @Composable

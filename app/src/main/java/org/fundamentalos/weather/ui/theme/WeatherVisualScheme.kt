@@ -64,20 +64,8 @@ fun weatherVisualScheme(
     longitude: Double? = null,
     now: OffsetDateTime = OffsetDateTime.now(),
 ): WeatherVisualScheme {
-    val inputs = current?.toWeatherVisualInputs(dailyForecast, latitude, longitude, now) ?: WeatherVisualInputs(
-        sunAltitude = 12.0,
-        sunProgress = 0.18,
-        cloudCover = 10.0,
-        rainAmount = 0.0,
-        hazeAmount = 0.0,
-        dustAmount = 0.0,
-        temperature = 18.0,
-        saturation = 92.0,
-        brightness = 0.0,
-        cohesion = 92.0,
-        accentAmount = 34.0,
-        accentFocus = 0.0,
-    )
+    val inputs = current?.toWeatherVisualInputs(dailyForecast, latitude, longitude, now)
+        ?: clearSkyInputs(latitude, longitude, now)
     val palette = generatePalette(inputs)
     val material = computeMaterialColors(palette, inputs)
 
@@ -351,23 +339,51 @@ private fun estimateSolarPosition(
     }
 
     if (sunrise != null && sunset != null && sunset > sunrise) {
-        return when {
-            minutes in sunrise..sunset -> {
-                val daylightProgress = (minutes - sunrise).toDouble() / (sunset - sunrise).toDouble()
-                SolarPosition(4.0 + sin(daylightProgress * PI) * 58.0, daylightProgress)
-            }
-            minutes < sunrise -> SolarPosition(
-                lerp(-10.0, 4.0, smoothstep((sunrise - 110).toDouble(), sunrise.toDouble(), minutes.toDouble())),
-                0.0,
-            )
-            else -> SolarPosition(
-                lerp(4.0, -10.0, smoothstep(sunset.toDouble(), (sunset + 130).toDouble(), minutes.toDouble())),
-                1.0,
-            )
-        }
+        return clockSolarPosition(minutes, sunrise, sunset)
     }
 
     return SolarPosition(fallbackSunAltitude(current, now), fallbackSunProgress(current, now))
+}
+
+/** Where the sun is at [minutes] past midnight, given only when it rises and sets. */
+private fun clockSolarPosition(minutes: Int, sunrise: Int, sunset: Int): SolarPosition = when {
+    minutes in sunrise..sunset -> {
+        val daylightProgress = (minutes - sunrise).toDouble() / (sunset - sunrise).toDouble()
+        SolarPosition(4.0 + sin(daylightProgress * PI) * 58.0, daylightProgress)
+    }
+    minutes < sunrise -> SolarPosition(
+        lerp(-10.0, 4.0, smoothstep((sunrise - 110).toDouble(), sunrise.toDouble(), minutes.toDouble())),
+        0.0,
+    )
+    else -> SolarPosition(
+        lerp(4.0, -10.0, smoothstep(sunset.toDouble(), (sunset + 130).toDouble(), minutes.toDouble())),
+        1.0,
+    )
+}
+
+/**
+ * A clear sky for the time of day, for before the weather is known: under the sun where the
+ * place is known, otherwise by the clock with the sun up from six to six. Night keeps the same
+ * subdued saturation and brightness a night with weather gets.
+ */
+private fun clearSkyInputs(latitude: Double?, longitude: Double?, now: OffsetDateTime): WeatherVisualInputs {
+    val sun = if (latitude != null && longitude != null) solarPosition(now, latitude, longitude)
+    else clockSolarPosition(now.hour * 60 + now.minute, sunrise = 6 * 60, sunset = 18 * 60)
+    val night = sun.altitude < 0.0
+    return WeatherVisualInputs(
+        sunAltitude = sun.altitude,
+        sunProgress = sun.progress,
+        cloudCover = 10.0,
+        rainAmount = 0.0,
+        hazeAmount = 0.0,
+        dustAmount = 0.0,
+        temperature = 18.0,
+        saturation = if (night) 84.0 else 92.0,
+        brightness = if (night) -3.0 else 0.0,
+        cohesion = 92.0,
+        accentAmount = 34.0,
+        accentFocus = 0.0,
+    )
 }
 
 private fun daylightProgress(minutes: Int, sunrise: Int?, sunset: Int?): Double? {
