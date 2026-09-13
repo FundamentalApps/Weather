@@ -5,8 +5,14 @@ page is drawn live by a shader that follows the weather and the sun; the cards o
 Material 3 glass. Data comes from the [FundamentalOS](https://fundamentalos.org) backend.
 
 <p align="center">
-  <img src="docs/screenshots/home.png" width="240" alt="Home page">
-  <img src="docs/screenshots/home-cards.png" width="240" alt="Home page, scrolled to the cards">
+  <img src="docs/screenshots/sunny.png" width="156" alt="Clear, the sun high">
+  <img src="docs/screenshots/partly-cloudy.png" width="156" alt="Partly cloudy">
+  <img src="docs/screenshots/overcast.png" width="156" alt="Overcast">
+  <img src="docs/screenshots/rain.png" width="156" alt="Light rain">
+  <img src="docs/screenshots/night.png" width="156" alt="A clear night">
+</p>
+<p align="center">
+  <img src="docs/screenshots/home-cards.png" width="240" alt="The cards, the headline pinned above them">
   <img src="docs/screenshots/map.png" width="240" alt="Weather map">
 </p>
 <p align="center">
@@ -38,12 +44,7 @@ Material 3 glass. Data comes from the [FundamentalOS](https://fundamentalos.org)
 Settings let you freeze the background animation, turn off the glass text, and turn off the
 IP-based location fallback.
 
-## Where the data comes from
-
-The app talks only to the FundamentalOS API (`https://api.fundamentalos.org`), which
-aggregates its sources server-side and returns one snapshot per place: current conditions,
-hourly and daily forecasts, air quality, minute-by-minute precipitation and warnings, in
-the app's language. The credits shown in the app's *Data sources* screen:
+## Data sources
 
 | What | Source |
 |---|---|
@@ -55,12 +56,7 @@ the app's language. The credits shown in the app's *Data sources* screen:
 | Moon texture | NASA / GSFC / Arizona State University |
 | Icons | Material Symbols |
 
-The backend is a separate project; this repository is the Android client only.
-
-**Location.** The app asks the system for a fix (GPS, network, passive, last known) and,
-until one arrives or when none does, asks the backend to place the device by its IP address.
-That fallback can be turned off in settings. The backend receives coordinates to fetch
-weather for, and the text of a place search; there is no account and no analytics.
+The backend is a separate project. This repository is the Android client only.
 
 ## Building
 
