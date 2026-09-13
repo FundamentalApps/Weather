@@ -5,7 +5,9 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.RectF
+import android.graphics.Region
 import android.graphics.Typeface
+import android.os.Build
 import android.os.SystemClock
 import android.util.LruCache
 import org.osmdroid.util.RectL
@@ -95,10 +97,11 @@ class MapInkOverlay(
         if (!settled) map.postInvalidateDelayed(SettleMillis)
         val inkZoom = floor(zoom).toInt().coerceIn(0, MaxInkZoom)
         val count = 1 shl inkZoom
-        val tilePx = TileSystem.MapSize(zoom) / count
+        val mapSize = TileSystem.MapSize(zoom)
+        val tilePx = mapSize / count
         projection.getMercatorViewPort(viewport)
-        val marginX = (viewport.right - viewport.left) / 8
-        val marginY = (viewport.bottom - viewport.top) / 8
+        val marginX = (viewport.right - viewport.left) * Margin
+        val marginY = (viewport.bottom - viewport.top) * Margin
         val firstX = floor((viewport.left - marginX) / tilePx).toInt().coerceIn(0, count - 1)
         val lastX = floor((viewport.right + marginX) / tilePx).toInt().coerceIn(0, count - 1)
         val firstY = floor((viewport.top - marginY) / tilePx).toInt().coerceIn(0, count - 1)
@@ -109,36 +112,53 @@ class MapInkOverlay(
         for (y in firstY..lastY) for (x in firstX..lastX) {
             val key = InkTileKey(inkZoom, x, y)
             val tile = store.peek(key)
-            if (tile == null) {
-                complete = false
-                if (settled) store.request(key)
-                drawStandIn(canvas, projection, key)
+            if (tile != null && tile.isSet) {
+                drawTile(canvas, projection, key, tile, inkZoom, clipTo = null)
                 continue
             }
-            if (!tile.isSet) {
-                // Baked ahead but not yet set: set it now, and stand in until it is.
-                store.set(key)
-                drawStandIn(canvas, projection, key)
-            }
-            drawTile(canvas, projection, key, tile, inkZoom, clipTo = null)
+            complete = false
+            // Not set: once the zoom holds still, ask for the tile, or have a baked one set.
+            // Not before — a zoom passes through every level on its way, and setting each
+            // one's tiles would keep the level it stops at waiting.
+            if (settled) { if (tile == null) store.request(key) else store.set(key) }
+            drawStandIn(canvas, projection, key)
+            // A baked tile has its names already, even without its ink.
+            if (tile != null) drawTile(canvas, projection, key, tile, inkZoom, clipTo = null)
         }
         drawLabels(canvas)
-        // With the view served, bake the way out: the coarser tiles over this view down to a
-        // continental zoom, and the world itself, fetched and decoded but not set, so a zoom
-        // out has its map within a moment. These go in the background, behind anything a pan
-        // or a zoom asks for meanwhile.
-        if (complete && settled) {
-            for (coarser in inkZoom - 1 downTo BakedZoom) {
-                val shift = inkZoom - coarser
-                for (y in (firstY shr shift)..(lastY shr shift)) for (x in (firstX shr shift)..(lastX shr shift)) {
-                    val key = InkTileKey(coarser, x, y)
-                    if (!store.has(key)) store.request(key, background = true)
-                }
-            }
-            for (z in 0 until BakedZoom) for (y in 0 until (1 shl z)) for (x in 0 until (1 shl z)) {
-                val key = InkTileKey(z, x, y)
+        if (complete && settled) bakeAhead(inkZoom, mapSize)
+    }
+
+    /**
+     * With the view served, bakes the way out: the next coarser levels, each over the screen
+     * as it would be at that zoom — a zoom out sees far more than the tiles above this view —
+     * and the world itself. Fetched and decoded, in the background, behind anything a pan or a
+     * zoom asks for meanwhile, so a zoom out finds its map in memory; the nearest level is set
+     * as well, so that a zoom out of one level finds its ink ready.
+     */
+    private fun bakeAhead(inkZoom: Int, mapSize: Double) {
+        val centreX = (viewport.left + viewport.right) / 2.0 / mapSize
+        val centreY = (viewport.top + viewport.bottom) / 2.0 / mapSize
+        // At any whole zoom a tile is the tile size on screen, so the screen's reach in tiles
+        // is the same at every level.
+        val tilePx = TileSystem.getTileSize().toDouble()
+        val reachX = (viewport.right - viewport.left) * (0.5 + Margin) / tilePx
+        val reachY = (viewport.bottom - viewport.top) * (0.5 + Margin) / tilePx
+        for (coarser in inkZoom - 1 downTo maxOf(inkZoom - BakedLevels, BakedZoom)) {
+            val count = 1 shl coarser
+            val firstX = floor(centreX * count - reachX).toInt().coerceIn(0, count - 1)
+            val lastX = floor(centreX * count + reachX).toInt().coerceIn(0, count - 1)
+            val firstY = floor(centreY * count - reachY).toInt().coerceIn(0, count - 1)
+            val lastY = floor(centreY * count + reachY).toInt().coerceIn(0, count - 1)
+            for (y in firstY..lastY) for (x in firstX..lastX) {
+                val key = InkTileKey(coarser, x, y)
                 if (!store.has(key)) store.request(key, background = true)
+                else if (coarser == inkZoom - 1) store.set(key, background = true)
             }
+        }
+        for (z in 0 until BakedZoom) for (y in 0 until (1 shl z)) for (x in 0 until (1 shl z)) {
+            val key = InkTileKey(z, x, y)
+            if (!store.has(key)) store.request(key, background = true)
         }
     }
 
@@ -146,22 +166,56 @@ class MapInkOverlay(
      * While a tile loads, the tile above it — which is what was on screen before a zoom in — or
      * the tiles below it — what was there before a zoom out — keep the map from blinking.
      */
+    private val below = ArrayList<Pair<InkTileKey, InkTile>>()
+
+    /**
+     * While a tile is not set, what is: the set tiles below it — what was on screen before a
+     * zoom out, drawn smaller, so still sharp — and over the rest of its square the nearest set
+     * tile above it — what was there before a zoom in — stretched. A tile that is only baked
+     * has no ink to stand in with, and is passed over for one that has.
+     */
     private fun drawStandIn(canvas: Canvas, projection: Projection, key: InkTileKey) {
-        if (key.zoom > 0) {
-            val parent = InkTileKey(key.zoom - 1, key.x shr 1, key.y shr 1)
-            store.peek(parent)?.let {
-                val clip = RectF()
-                tileRect(projection, key, clip)
-                drawTile(canvas, projection, parent, it, key.zoom, clipTo = clip)
-                return
+        below.clear()
+        collectSetBelow(key, StandInDepth, below)
+        nearestSetAbove(key)?.let { (aboveKey, above) ->
+            val clip = RectF()
+            tileRect(projection, key, clip)
+            canvas.save()
+            canvas.clipRect(clip)
+            for ((childKey, _) in below) {
+                tileRect(projection, childKey, tileRect)
+                canvas.clipOut(tileRect)
             }
+            drawTile(canvas, projection, aboveKey, above, key.zoom, clipTo = clip)
+            canvas.restore()
         }
-        if (key.zoom < MaxInkZoom) {
-            for (dy in 0..1) for (dx in 0..1) {
-                val child = InkTileKey(key.zoom + 1, key.x * 2 + dx, key.y * 2 + dy)
-                store.peek(child)?.let { drawTile(canvas, projection, child, it, key.zoom, clipTo = null) }
-            }
+        for ((childKey, child) in below) drawTile(canvas, projection, childKey, child, key.zoom, clipTo = null)
+    }
+
+    /** The set tiles under [key], down to [depth] levels, where a set one is not found sooner. */
+    private fun collectSetBelow(key: InkTileKey, depth: Int, out: MutableList<Pair<InkTileKey, InkTile>>) {
+        if (depth == 0 || key.zoom >= MaxInkZoom) return
+        for (dy in 0..1) for (dx in 0..1) {
+            val child = InkTileKey(key.zoom + 1, key.x * 2 + dx, key.y * 2 + dy)
+            val tile = store.peek(child)
+            if (tile != null && tile.isSet) out += child to tile else collectSetBelow(child, depth - 1, out)
         }
+    }
+
+    /** The nearest set tile over [key], up to [StandInReach] levels up. */
+    private fun nearestSetAbove(key: InkTileKey): Pair<InkTileKey, InkTile>? {
+        var above = key
+        repeat(minOf(StandInReach, key.zoom)) {
+            above = InkTileKey(above.zoom - 1, above.x shr 1, above.y shr 1)
+            val tile = store.peek(above)
+            if (tile != null && tile.isSet) return above to tile
+        }
+        return null
+    }
+
+    private fun Canvas.clipOut(rect: RectF) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) clipOutRect(rect)
+        else @Suppress("DEPRECATION") clipRect(rect, Region.Op.DIFFERENCE)
     }
 
     /**
@@ -287,8 +341,20 @@ class MapInkOverlay(
         /** How long the zoom must hold still before tiles are asked for. */
         const val SettleMillis = 200L
 
-        /** Coarser levels are baked down to this zoom over the view; below it, the whole world. */
+        /** How far past the screen's edges tiles are drawn, as a share of the screen. */
+        const val Margin = 0.125
+
+        /** How many coarser levels are baked ahead over the screen. */
+        const val BakedLevels = 2
+
+        /** Baking over the screen stops at this zoom; below it, the whole world is baked. */
         const val BakedZoom = 2
+
+        /** How many levels down a stand-in is looked for: what was on screen before a zoom out. */
+        const val StandInDepth = 2
+
+        /** How many levels up a stand-in is looked for: eight times stretched is still a map. */
+        const val StandInReach = 3
 
         /**
          * The smallest country, in square metres of mercator, named at a zoom: a world view

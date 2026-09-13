@@ -12,6 +12,7 @@ import android.util.LruCache
 import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArraySet
 import java.util.zip.GZIPInputStream
 import kotlinx.coroutines.CoroutineScope
@@ -23,6 +24,7 @@ import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 import org.fundamentalos.weather.BuildConfig
+import kotlin.math.abs
 
 /**
  * The map is drawn from OpenStreetMap's own vector tiles, which stop at this zoom; the map
@@ -67,11 +69,21 @@ class InkLabel(
  * tile is drawn between one and two times its whole-zoom size, so it is set at one and a half
  * times that: never magnified by more than a third, never shrunk by more than a third.
  */
-data class InkStyle(val density: Float, val setSizePx: Int)
+data class InkStyle(val density: Float, val setSizePx: Int) {
+    /** The finest detail a mask can show, in units of the tile grid: just over half a pixel. */
+    val grain: Float get() = InkTile.Extent.toFloat() / setSizePx * 0.6f
+}
 
-/** A tile's water, roads by class and borders by level, as paths in tile coordinates. */
-class InkPaths(val water: Path?, val roads: Map<RoadClass, Path>, val boundaries: Map<Int, Path>) {
+/**
+ * A tile's water, roads by class and borders by level, as paths in tile coordinates, and how
+ * many points they hold between them, which is what they cost to keep.
+ */
+class InkPaths(val water: Path?, val roads: Map<RoadClass, Path>, val boundaries: Map<Int, Path>, val points: Int) {
     val isEmpty: Boolean get() = water == null && roads.isEmpty() && boundaries.isEmpty()
+
+    companion object {
+        val None = InkPaths(null, emptyMap(), emptyMap(), 0)
+    }
 }
 
 /**
@@ -98,14 +110,16 @@ class InkTile(
     val isSet: Boolean = false,
 ) {
     /**
-     * The same tile with its masks set. A new object rather than a change to this one: a tile
-     * in the cache must not change size under the cache, which throws when it notices.
+     * The same tile with its masks set, and without its paths: nothing reads them once they
+     * are set, and a busy coast's run to megabytes. A new object rather than a change to this
+     * one: a tile in the cache must not change size under the cache, which throws when it
+     * notices.
      */
     fun set(style: InkStyle): InkTile =
-        InkTile(extent, zoom, paths, labels, InkRenderer.render(paths, style, zoom), isSet = true)
+        InkTile(extent, zoom, InkPaths.None, labels, InkRenderer.render(paths, style, zoom), isSet = true)
 
-    /** What the cache charges for the tile: the masks, plus a guess for the paths and labels. */
-    val bytes: Int = (masks?.bytes ?: 0) + labels.size * 256 + 200_000
+    /** What the cache charges for the tile: the masks, and an estimate for the paths and labels. */
+    val bytes: Int = (masks?.bytes ?: 0) + paths.points * BytesPerPoint + labels.size * 512 + 4096
 
     companion object {
         /** The layers the map reads; the rest of the tile is not even decoded. */
@@ -126,10 +140,20 @@ class InkTile(
         /** The grid every layer is brought to. */
         const val Extent = 4096
 
-        fun from(layers: Map<String, MvtLayer>, zoom: Int): InkTile {
+        /** What a path costs per point: two floats and a verb, with some room. */
+        const val BytesPerPoint = 10
+
+        /**
+         * Reads the tile's layers into paths and labels. Points closer than [grain] — in
+         * units of the grid — to the last one kept are dropped: a coast is drawn with far
+         * more points than the mask can show, and stroking them costs the most of setting
+         * a tile.
+         */
+        fun from(layers: Map<String, MvtLayer>, zoom: Int, grain: Float): InkTile {
             // The layers of one tile need not share an extent — the ocean often comes at 2048
             // where the labels are at 4096 — so each is scaled onto one grid as it is read.
             fun MvtLayer.grid(): Float = Extent.toFloat() / extent
+            var points = 0
             val water = Path().apply { fillType = Path.FillType.EVEN_ODD }
             var hasWater = false
             for (name in listOf("ocean", "water_polygons")) {
@@ -137,7 +161,7 @@ class InkTile(
                 val k = layer.grid()
                 for (feature in layer.features) {
                     if (feature.type != 3) continue
-                    for (ring in feature.parts) { water.addPolyline(ring, k, close = true); hasWater = true }
+                    for (ring in feature.parts) { points += water.addPolyline(ring, k, grain, close = true); hasWater = true }
                 }
             }
             val roads = HashMap<RoadClass, Path>()
@@ -151,7 +175,7 @@ class InkTile(
                         else -> continue
                     }
                     val path = roads.getOrPut(roadClass) { Path() }
-                    for (line in feature.parts) path.addPolyline(line, k, close = false)
+                    for (line in feature.parts) points += path.addPolyline(line, k, grain, close = false)
                 }
             }
             val boundaries = HashMap<Int, Path>()
@@ -163,7 +187,7 @@ class InkTile(
                     val level = (feature.tags["admin_level"] as? Long)?.toInt() ?: continue
                     if (level != 2 && level != 4) continue
                     val path = boundaries.getOrPut(level) { Path() }
-                    for (line in feature.parts) path.addPolyline(line, k, close = false)
+                    for (line in feature.parts) points += path.addPolyline(line, k, grain, close = false)
                 }
             }
             val labels = ArrayList<InkLabel>()
@@ -182,7 +206,7 @@ class InkTile(
                     labels += feature.toLabels(adminLevel = level, k) ?: continue
                 }
             }
-            return InkTile(Extent, zoom, InkPaths(water.takeIf { hasWater }, roads, boundaries), labels)
+            return InkTile(Extent, zoom, InkPaths(water.takeIf { hasWater }, roads, boundaries, points), labels)
         }
 
         private fun MvtFeature.toLabels(adminLevel: Int, k: Float): List<InkLabel>? {
@@ -200,11 +224,28 @@ class InkTile(
             return out
         }
 
-        private fun Path.addPolyline(points: FloatArray, k: Float, close: Boolean) {
-            if (points.size < 4) return
-            moveTo(points[0] * k, points[1] * k)
-            for (i in 2 until points.size - 1 step 2) lineTo(points[i] * k, points[i + 1] * k)
+        /**
+         * Adds the line, less the points within [grain] of the one before, and returns how
+         * many points it kept. The last point of an open line is always kept.
+         */
+        private fun Path.addPolyline(points: FloatArray, k: Float, grain: Float, close: Boolean): Int {
+            if (points.size < 4) return 0
+            var lastX = points[0] * k
+            var lastY = points[1] * k
+            moveTo(lastX, lastY)
+            var kept = 1
+            val end = points.size - 2
+            for (i in 2 until points.size - 1 step 2) {
+                val x = points[i] * k
+                val y = points[i + 1] * k
+                if (i != end && abs(x - lastX) + abs(y - lastY) < grain) continue
+                lineTo(x, y)
+                lastX = x
+                lastY = y
+                kept++
+            }
             if (close) close()
+            return kept
         }
     }
 }
@@ -240,14 +281,17 @@ object InkRenderer {
         val hasLines = paths.water != null || paths.roads.isNotEmpty() || paths.boundaries.isNotEmpty()
         val lines = if (!hasLines) null else mask { canvas, paint ->
             paint.style = Paint.Style.STROKE
-            paint.strokeJoin = Paint.Join.ROUND
-            paint.strokeCap = Paint.Cap.ROUND
-            // A coastline keeps land and sea apart where the field alone would blur them.
+            // A coastline keeps land and sea apart where the field alone would blur them. It
+            // is drawn as a hairline — one pixel of the mask, whatever the width — which the
+            // renderer draws without building a stroke around each of its hundred thousand
+            // corners: a coast that cost the most of setting a tile now costs a tenth of it.
             paths.water?.let {
-                paint.alpha = 64
-                paint.strokeWidth = 0.6f * width
+                paint.alpha = 90
+                paint.strokeWidth = 0f
                 canvas.drawPath(it, paint)
             }
+            paint.strokeJoin = Paint.Join.ROUND
+            paint.strokeCap = Paint.Cap.ROUND
             for ((level, path) in paths.boundaries) {
                 if (level == 4 && zoom < 4) continue
                 paint.alpha = if (level == 2) 150 else 105
@@ -273,31 +317,52 @@ object InkRenderer {
 class InkTileStore(context: Context) {
     private val dir = File(context.cacheDir, "osm-ink")
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    /** How many tiles load at once. */
     private val gate = Semaphore(3)
+    /**
+     * How many baked tiles are set at once. Its own gate: setting is a moment's work that
+     * must not wait behind the loads, which mostly wait on the network.
+     */
+    private val settingGate = Semaphore(2)
+    /** Setting ahead of a zoom out takes one core, and leaves the rest to what is looked at. */
+    private val backgroundSettingGate = Semaphore(1)
     private val known = HashSet<InkTileKey>()
 
-    /** Tiles that have been set, charged by their bitmaps. */
+    /**
+     * Tiles that have been set, charged by their bitmaps. A tile is in this or in the pantry,
+     * never both, so either one letting go of a tile means it is no longer known. Neither
+     * cache looks into the other from inside its own lock: each locks itself, and two threads
+     * evicting at once would wait on each other.
+     */
     private val memory: LruCache<InkTileKey, InkTile> = object : LruCache<InkTileKey, InkTile>(MemoryBudgetBytes) {
         override fun sizeOf(key: InkTileKey, value: InkTile): Int = value.bytes
         override fun entryRemoved(evicted: Boolean, key: InkTileKey, oldValue: InkTile, newValue: InkTile?) {
-            if (newValue == null) synchronized(known) { if (pantry.get(key) == null) known.remove(key) }
+            if (newValue == null) synchronized(known) { known.remove(key) }
         }
     }
 
     /**
-     * Tiles baked ahead but not yet set: paths and labels only, so a small count of them is
-     * cheap. Kept apart from the set tiles, or the ones nobody has looked at yet would always
-     * be the first to go and be baked again and again.
+     * Tiles baked ahead but not yet set: paths and labels only, so a screen of them is cheap.
+     * Kept apart from the set tiles, or the ones nobody has looked at yet would always be the
+     * first to go and be baked again and again.
      */
-    private val pantry: LruCache<InkTileKey, InkTile> = object : LruCache<InkTileKey, InkTile>(PantryTiles) {
+    private val pantry: LruCache<InkTileKey, InkTile> = object : LruCache<InkTileKey, InkTile>(PantryBudgetBytes) {
+        override fun sizeOf(key: InkTileKey, value: InkTile): Int = value.bytes
         override fun entryRemoved(evicted: Boolean, key: InkTileKey, oldValue: InkTile, newValue: InkTile?) {
-            if (newValue == null) synchronized(known) { if (memory.get(key) == null) known.remove(key) }
+            if (newValue == null) synchronized(known) { known.remove(key) }
+            if (evicted) crowdedOutAt[key] = SystemClock.elapsedRealtime()
         }
     }
     private val inFlight = HashMap<InkTileKey, Job>()
     private var foregroundInFlight = 0
     private val resetting = HashSet<InkTileKey>()
     private val failedAt = HashMap<InkTileKey, Long>()
+    /**
+     * When a baked tile was crowded out of the pantry. It is not baked again for a while: if
+     * a bake does not fit, its tiles would otherwise crowd each other out and be baked over
+     * and over, a decode at a time.
+     */
+    private val crowdedOutAt = ConcurrentHashMap<InkTileKey, Long>()
     private val listeners = CopyOnWriteArraySet<() -> Unit>()
 
     /** The style tiles are set in. Changing it lets go of every tile set in the old one. */
@@ -308,6 +373,7 @@ class InkTileStore(context: Context) {
             field = value
             memory.evictAll()
             pantry.evictAll()
+            crowdedOutAt.clear()
         }
 
     /** The tile if it is already in memory, set or only baked. Never loads. */
@@ -329,8 +395,11 @@ class InkTileStore(context: Context) {
         synchronized(inFlight) {
             if (has(key) || inFlight.containsKey(key)) return
             if (background && foregroundInFlight > 0) return
+            val now = SystemClock.elapsedRealtime()
             val failed = failedAt[key]
-            if (failed != null && SystemClock.elapsedRealtime() - failed < RetryAfterMillis) return
+            if (failed != null && now - failed < RetryAfterMillis) return
+            val crowdedOut = crowdedOutAt[key]
+            if (background && crowdedOut != null && now - crowdedOut < BakeAgainAfterMillis) return
             if (!background) foregroundInFlight++
             inFlight[key] = scope.launch {
                 val tile = try {
@@ -359,17 +428,21 @@ class InkTileStore(context: Context) {
     }
 
     /**
-     * Sets a tile that was baked ahead, in the background, now that it is looked at. Nothing
+     * Sets a tile that was baked ahead, now that it is looked at — or, in the [background],
+     * before it is, one at a time, so that a zoom out finds the next level's ink ready. Nothing
      * happens if it is set already or being set.
      */
-    fun set(key: InkTileKey) {
+    fun set(key: InkTileKey, background: Boolean = false) {
         val style = style ?: return
         val tile = peek(key) ?: return
         synchronized(inFlight) {
             if (tile.isSet || !resetting.add(key)) return
             scope.launch {
                 try {
+                    val started = SystemClock.elapsedRealtime()
+                    val gate = if (background) backgroundSettingGate else settingGate
                     val done = gate.withPermit { tile.set(style) }
+                    Log.d(Tag, "tile ${key.zoom}/${key.x},${key.y}: set from the pantry in ${SystemClock.elapsedRealtime() - started} ms")
                     // Swap it in among the set tiles, so the cache charges for the masks.
                     synchronized(inFlight) {
                         if (peek(key) === tile && this@InkTileStore.style == style) {
@@ -423,12 +496,13 @@ class InkTileStore(context: Context) {
             fetched = false
         }
         val read = SystemClock.elapsedRealtime()
-        val decoded = InkTile.from(MvtDecoder.decode(bytes, InkTile.Layers), key.zoom)
+        val decoded = InkTile.from(MvtDecoder.decode(bytes, InkTile.Layers), key.zoom, style.grain)
         val tile = if (set) decoded.set(style) else decoded
         Log.d(
             Tag, "tile ${key.zoom}/${key.x},${key.y}: ${bytes.size} bytes " +
                 "${if (fetched) "fetched" else "from disk"} in ${read - started} ms, " +
-                "decoded and set in ${SystemClock.elapsedRealtime() - read} ms, ${tile.labels.size} labels"
+                "decoded${if (set) " and set" else ""} in ${SystemClock.elapsedRealtime() - read} ms, " +
+                "${tile.paths.points} points, ${tile.labels.size} labels, ${tile.bytes / 1024} KB"
         )
         return tile
     }
@@ -468,15 +542,20 @@ class InkTileStore(context: Context) {
         /**
          * A screen of set tiles is about two and a quarter times the screen's own pixels in
          * mask bytes (two one-byte masks at one and a half times the size), whatever the zoom;
-         * this is a few screens' worth, with their margins.
+         * this holds three levels' screens with their margins — the one looked at, the finer
+         * one it came from, and the coarser one set ahead of it.
          */
-        private const val MemoryBudgetBytes = 48 * 1024 * 1024
+        private const val MemoryBudgetBytes = 96 * 1024 * 1024
 
-        /** Baked tiles kept without a bitmap: a view's coarser levels and the world, twice over. */
-        private const val PantryTiles = 96
+        /**
+         * Baked tiles, kept as paths and labels: a few screens of the coarser levels and the
+         * world. A tile of a busy coast at a regional zoom is about a quarter of a megabyte.
+         */
+        private const val PantryBudgetBytes = 32 * 1024 * 1024
         /** Coastlines, borders and roads change slowly; a month is fine. */
         private const val DiskTtlMillis = 30L * 24 * 60 * 60 * 1000
         private const val RetryAfterMillis = 10_000L
+        private const val BakeAgainAfterMillis = 60_000L
         private const val ConnectTimeoutMillis = 15_000
         private const val ReadTimeoutMillis = 30_000
     }
