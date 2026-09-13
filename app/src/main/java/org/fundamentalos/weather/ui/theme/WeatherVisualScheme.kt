@@ -63,9 +63,11 @@ fun weatherVisualScheme(
     latitude: Double? = null,
     longitude: Double? = null,
     now: OffsetDateTime = OffsetDateTime.now(),
+    /** Whether the app is in its dark theme, which decides the clear sky shown before any weather. */
+    darkTheme: Boolean = false,
 ): WeatherVisualScheme {
     val inputs = current?.toWeatherVisualInputs(dailyForecast, latitude, longitude, now)
-        ?: clearSkyInputs(latitude, longitude, now)
+        ?: clearSkyInputs(night = darkTheme)
     val palette = generatePalette(inputs)
     val material = computeMaterialColors(palette, inputs)
 
@@ -361,18 +363,23 @@ private fun clockSolarPosition(minutes: Int, sunrise: Int, sunset: Int): SolarPo
     )
 }
 
+/** A clear morning's sun, for the light theme's sky before any weather. */
+private const val ClearDaySunAltitude = 35.0
+private const val ClearDaySunProgress = 0.35
+
+/** Deep night, for the dark theme's. */
+private const val ClearNightSunAltitude = -30.0
+
 /**
- * A clear sky for the time of day, for before the weather is known: under the sun where the
- * place is known, otherwise by the clock with the sun up from six to six. Night keeps the same
+ * A clear sky for before the weather is known, by the theme rather than the clock: the light
+ * theme opens on a clear day and the dark theme on a clear night, so the page's colours match
+ * the system's until the real sky, with its own sun, cross-fades in. Night keeps the same
  * subdued saturation and brightness a night with weather gets.
  */
-private fun clearSkyInputs(latitude: Double?, longitude: Double?, now: OffsetDateTime): WeatherVisualInputs {
-    val sun = if (latitude != null && longitude != null) solarPosition(now, latitude, longitude)
-    else clockSolarPosition(now.hour * 60 + now.minute, sunrise = 6 * 60, sunset = 18 * 60)
-    val night = sun.altitude < 0.0
+private fun clearSkyInputs(night: Boolean): WeatherVisualInputs {
     return WeatherVisualInputs(
-        sunAltitude = sun.altitude,
-        sunProgress = sun.progress,
+        sunAltitude = if (night) ClearNightSunAltitude else ClearDaySunAltitude,
+        sunProgress = if (night) 0.5 else ClearDaySunProgress,
         cloudCover = 10.0,
         rainAmount = 0.0,
         hazeAmount = 0.0,

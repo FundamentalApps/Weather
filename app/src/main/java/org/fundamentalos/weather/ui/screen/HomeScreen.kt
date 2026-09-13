@@ -1,5 +1,6 @@
 package org.fundamentalos.weather.ui.screen
 
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -86,12 +87,14 @@ fun HomeScreen(
         // weather is known, the device's own place puts the sun where it is.
         val skyWallTime by rememberSkyWallTime()
         val fallbackPlace = vm.currentLocation.value ?: vm.deviceLocation.value
+        val darkTheme = isSystemInDarkTheme()
         fun schemeOf(reading: HomeContent?) = weatherVisualScheme(
             current = reading?.weather,
             dailyForecast = reading?.forecast ?: emptyList(),
             latitude = reading?.latitude ?: fallbackPlace?.latitude,
             longitude = reading?.longitude ?: fallbackPlace?.longitude,
             now = skyWallTime,
+            darkTheme = darkTheme,
         )
         val visualScheme = schemeOf(displayed)
         val skyShown = transition.skyShown
