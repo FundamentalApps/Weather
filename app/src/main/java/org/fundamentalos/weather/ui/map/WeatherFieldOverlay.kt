@@ -167,7 +167,7 @@ class WeatherFieldOverlay(
 
     private companion object {
         const val FadeMillis = 300f
-        const val MaxOpacity = 0.55f
+        const val MaxOpacity = 0.3f
 
         /** Level = floor(zoom) - this, so a chunk spans 8 to 16 density-scaled tiles. */
         const val LevelOffset = 3
