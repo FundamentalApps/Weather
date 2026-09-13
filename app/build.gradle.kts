@@ -46,6 +46,22 @@ extensions.configure<ApplicationExtension>("android") {
         buildConfigField("String", "FOS_API_BASE_URL", localStringPropertyOr("app.fosApiBaseUrl", "https://api.fundamentalos.org"))
     }
 
+    // How the app reaches the phone: built into FundamentalOS as its weather app, or installed
+    // on its own on any Android. The inline build is simply "Weather" and leaves out what the
+    // OS already covers; the standalone one carries the OS's name.
+    flavorDimensions += "distribution"
+    productFlavors {
+        create("inline") {
+            dimension = "distribution"
+            buildConfigField("boolean", "INLINE", "true")
+        }
+        create("standalone") {
+            dimension = "distribution"
+            isDefault = true
+            buildConfigField("boolean", "INLINE", "false")
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = true

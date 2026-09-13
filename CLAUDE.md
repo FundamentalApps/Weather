@@ -9,11 +9,11 @@ Weather is a native Android weather app (`org.fundamentalos.weather`) built with
 ## Build & Run
 
 ```bash
-# Debug build
-./gradlew assembleDebug
+# Debug build of the standalone flavour (the default); assembleDebug builds both flavours
+./gradlew assembleStandaloneDebug
 
 # Release build
-./gradlew assembleRelease
+./gradlew assembleStandaloneRelease
 
 # Unit tests
 ./gradlew test
@@ -21,6 +21,8 @@ Weather is a native Android weather app (`org.fundamentalos.weather`) built with
 # Instrumented tests (requires connected device/emulator)
 ./gradlew connectedAndroidTest
 ```
+
+Two product flavours in the `distribution` dimension: `standalone` (installed on its own, named "Fundamental Weather" via `app/src/standalone/res`) and `inline` (built into FundamentalOS as its weather app, named "Weather"). `BuildConfig.INLINE` tells them apart; the inline build hides the glass-text switch in Settings and the package name and credits on About. A `benchmark` build type (release-like, R8 off, `.benchmark` suffix) hosts the offline sky benchmark.
 
 Version code is derived from `git rev-list --count --first-parent HEAD`; version name from git tags matching `v[0-9]*`.
 

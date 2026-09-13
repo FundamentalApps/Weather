@@ -33,7 +33,7 @@ def main():
     if len(devices)!=1:raise SystemExit('Attach exactly one authorized Android device.')
     if int(adb('shell','getprop','ro.build.version.sdk'))<33:raise SystemExit('Paired AGSL benchmark requires Android 13+.')
     if not args.skip_install:
-        print(adb('install','-r',str(ROOT/'app/build/outputs/apk/benchmark/app-benchmark.apk')),flush=True)
+        print(adb('install','-r',str(ROOT/'app/build/outputs/apk/standalone/benchmark/app-standalone-benchmark.apk')),flush=True)
     metadata={k:adb('shell',*v) for k,v in {
         'model':['getprop','ro.product.model'],'build':['getprop','ro.build.fingerprint'],
         'size':['wm','size'],'density':['wm','density'],'battery':['dumpsys','battery'],

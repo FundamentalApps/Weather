@@ -11,7 +11,7 @@ p.add_argument('--phase',type=float,default=0.0)
 a=p.parse_args();a.output.mkdir(parents=True,exist_ok=True)
 adb=str(Path.home()/'Library/Android/sdk/platform-tools/adb');package='org.fundamentalos.weather.benchmark'
 def run(*cmd,check=True):return subprocess.run([adb,*cmd],check=check,capture_output=True,text=True,timeout=60).stdout.strip()
-if a.install:print(run('install','-r','app/build/outputs/apk/benchmark/app-benchmark.apk'),flush=True)
+if a.install:print(run('install','-r','app/build/outputs/apk/standalone/benchmark/app-standalone-benchmark.apk'),flush=True)
 try:
  for scene in a.scenes:
   ident=f'{a.renderer}-{scene}-bare-0';remote=f'/sdcard/Android/data/{package}/files/{ident}'

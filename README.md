@@ -49,9 +49,14 @@ opens the project directly; on the command line:
 ```bash
 git clone https://github.com/FundamentalApps/Weather.git
 cd Weather
-./gradlew assembleDebug        # app/build/outputs/apk/debug/app-debug.apk
-./gradlew installDebug         # onto a connected device
+./gradlew assembleStandaloneDebug   # app/build/outputs/apk/standalone/debug/app-standalone-debug.apk
+./gradlew installStandaloneDebug    # onto a connected device
 ```
+
+There are two flavours. `standalone` is the app on its own, on any Android, named
+*Fundamental Weather*. `inline` is the app as built into FundamentalOS, named *Weather*, and
+leaves out what the OS already covers: the glass-text switch, and the package name and
+provider on the About page.
 
 The app needs Android 7.0 (API 24) or later. The shader sky, the glass text and per-app
 language need Android 13.

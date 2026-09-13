@@ -13,15 +13,18 @@ import org.fundamentalos.weather.ui.components.PreferenceScreen
 import org.fundamentalos.weather.ui.components.PreferenceSectionHeader
 import org.fundamentalos.weather.ui.theme.PreviewThemeWithBg
 
-/** What this build is and who serves it. */
+/**
+ * What this build is and who serves it. Built into FundamentalOS, the package name and the
+ * provider go without saying and are left out.
+ */
 @Composable
 fun AboutScreen(onBackClick: () -> Unit, modifier: Modifier = Modifier) {
-    val general = listOf(
-        stringResource(R.string.app_name) to stringResource(R.string.app_description),
-        stringResource(R.string.version) to "${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})",
-        stringResource(R.string.package_name) to BuildConfig.APPLICATION_ID,
-        stringResource(R.string.license) to "GNU GPL v3",
-    )
+    val general = buildList {
+        add(stringResource(R.string.app_name) to stringResource(R.string.app_description))
+        add(stringResource(R.string.version) to "${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})")
+        if (!BuildConfig.INLINE) add(stringResource(R.string.package_name) to BuildConfig.APPLICATION_ID)
+        add(stringResource(R.string.license) to "GNU GPL v3")
+    }
 
     PreferenceScreen(title = stringResource(R.string.about), onBack = onBackClick, modifier = modifier) {
         PreferenceSectionHeader(stringResource(R.string.general))
@@ -30,9 +33,11 @@ fun AboutScreen(onBackClick: () -> Unit, modifier: Modifier = Modifier) {
             PreferenceRow(shape) { PreferenceLabels(name, subtitle = value) }
         }
 
-        PreferenceSectionHeader(stringResource(R.string.credits))
-        PreferenceGroup(1) { _, shape ->
-            PreferenceRow(shape) { PreferenceLabels(stringResource(R.string.provider), subtitle = "Fundamental OS") }
+        if (!BuildConfig.INLINE) {
+            PreferenceSectionHeader(stringResource(R.string.credits))
+            PreferenceGroup(1) { _, shape ->
+                PreferenceRow(shape) { PreferenceLabels(stringResource(R.string.provider), subtitle = "Fundamental OS") }
+            }
         }
     }
 }

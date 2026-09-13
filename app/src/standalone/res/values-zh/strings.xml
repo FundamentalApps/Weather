@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- On its own, the app carries the name of the OS it comes from. -->
+    <string name="app_name">Fundamental 天气</string>
+</resources>

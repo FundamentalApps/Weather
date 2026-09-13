@@ -10,6 +10,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import org.fundamentalos.weather.BuildConfig
 import org.fundamentalos.weather.settings.AppSettings
 import org.fundamentalos.weather.ui.components.PreferenceGroup
 import org.fundamentalos.weather.ui.components.PreferenceLabels
@@ -31,20 +32,27 @@ fun SettingsScreen(
     modifier: Modifier = Modifier,
     settings: AppSettings = koinInject(),
 ) {
-    val appearance = listOf(
-        Toggle(
-            title = stringResource(R.string.background_animation),
-            subtitle = stringResource(R.string.background_animation_description),
-            checked = settings.animatedBackground,
-            onCheckedChange = { settings.animatedBackground = it },
-        ),
-        Toggle(
-            title = stringResource(R.string.glass_text),
-            subtitle = stringResource(R.string.glass_text_description),
-            checked = settings.glassText,
-            onCheckedChange = { settings.glassText = it },
-        ),
-    )
+    val appearance = buildList {
+        add(
+            Toggle(
+                title = stringResource(R.string.background_animation),
+                subtitle = stringResource(R.string.background_animation_description),
+                checked = settings.animatedBackground,
+                onCheckedChange = { settings.animatedBackground = it },
+            )
+        )
+        // Built into FundamentalOS, the glass text is the OS's look and not a choice.
+        if (!BuildConfig.INLINE) {
+            add(
+                Toggle(
+                    title = stringResource(R.string.glass_text),
+                    subtitle = stringResource(R.string.glass_text_description),
+                    checked = settings.glassText,
+                    onCheckedChange = { settings.glassText = it },
+                )
+            )
+        }
+    }
     val location = listOf(
         Toggle(
             title = stringResource(R.string.ip_fallback),
