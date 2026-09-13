@@ -38,6 +38,9 @@ private val SlideSpec = tween<Float>(SlideMillis, easing = FastOutSlowInEasing)
  */
 val LocalScreenCovered = staticCompositionLocalOf<() -> Boolean> { { false } }
 
+/** How deep in the back stack the screen this is read from sits: the home page is 0. */
+val LocalScreenDepth = staticCompositionLocalOf { 0 }
+
 /** One pushed screen's travel: 0 is fully off-screen, 1 is covering what is under it. */
 @Stable
 class PushSlide(initialProgress: Float = 0f) {
@@ -148,6 +151,6 @@ fun PushStackEntry(
     Box(Modifier.fillMaxSize().zIndex(depth.toFloat()).graphicsLayer {
         translationX = (if (slide.fromLeft) -1f else 1f) * size.width * (1f - slide.progress.value)
     }.pushedUnder(motion, depth)) {
-        content(close)
+        androidx.compose.runtime.CompositionLocalProvider(LocalScreenDepth provides depth) { content(close) }
     }
 }

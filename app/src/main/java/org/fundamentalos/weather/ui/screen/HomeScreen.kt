@@ -202,15 +202,18 @@ fun HomeScreen(
                                     Box(fading) { Entering(transition.enter, 0) { QuickInfoChips(content) } }
                                 }
                             }
-                            // The cards, cut at the pane's top edge the way the upright window cuts them.
+                            // The cards, cut at the pane's top edge the way the upright window cuts
+                            // them. The edge sits exactly on the first card's top: with no room
+                            // above it to travel, the first scroll pins its title at once, which is
+                            // the state the upright page reaches when its headline has collapsed.
                             Box(
                                 Modifier
                                     .fillMaxSize()
-                                    .padding(end = 16.dp)
+                                    .padding(top = LandscapeCardsHeadroom, end = 16.dp)
                                     .onGloballyPositioned { scrollClipTop.floatValue = it.positionInWindow().y }
                                     .clipToBounds()
                             ) {
-                                cardsColumn(LandscapeCardsHeadroom, LandscapeCardsFootroom, false)
+                                cardsColumn(0.dp, LandscapeCardsFootroom, false)
                             }
                         }
                     } else {

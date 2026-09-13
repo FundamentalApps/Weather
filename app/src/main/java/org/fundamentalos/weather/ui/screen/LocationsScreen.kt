@@ -10,6 +10,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.layout.only
+import androidx.compose.foundation.layout.displayCutout
+import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -202,7 +206,8 @@ fun LocationsScreen(
 
     StatusBarAppearance(lightBackground = !isSystemInDarkTheme())
     Surface(modifier = modifier.fillMaxSize(), color = MaterialTheme.colorScheme.surfaceContainer) {
-        Box(Modifier.fillMaxSize()) {
+        // Sideways, a notch sits at one side; the content keeps clear of it.
+        Box(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.displayCutout.only(WindowInsetsSides.Horizontal))) {
             SavedPlacesList(
                 places = savedPlaces.places,
                 onOpen = { place ->

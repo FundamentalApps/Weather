@@ -5,6 +5,11 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.layout.only
+import androidx.compose.foundation.layout.displayCutout
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
@@ -61,7 +66,8 @@ fun PreferenceScreen(
     // The page sits a step under the rows it carries: containers behind, bright surfaces on top.
     StatusBarAppearance(lightBackground = !isSystemInDarkTheme())
     Surface(modifier = modifier.fillMaxSize(), color = MaterialTheme.colorScheme.surfaceContainer) {
-        Box(Modifier.fillMaxSize()) {
+        // Sideways, a notch sits at one side; the content keeps clear of it.
+        Box(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.displayCutout.only(WindowInsetsSides.Horizontal))) {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
