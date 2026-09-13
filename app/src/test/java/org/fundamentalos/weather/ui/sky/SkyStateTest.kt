@@ -30,4 +30,19 @@ class SkyStateTest {
         assertEquals(a, a.interpolate(b, -1f))
         assertEquals(b, a.interpolate(b, 2f))
     }
+    @Test fun nightToDaySpendsItsMiddleOnTheHorizon() {
+        // Deep night to high noon: mixed by height alone the horizon would pass in a fifth of
+        // the change; mixed in the sky's terms, the middle half of it is spent there.
+        val night = SkyState(sunAltitude = -45f)
+        val noon = SkyState(sunAltitude = 65f)
+        val quarter = night.interpolate(noon, .25f).sunAltitude
+        val half = night.interpolate(noon, .5f).sunAltitude
+        val threeQuarters = night.interpolate(noon, .75f).sunAltitude
+        assertTrue("$quarter", quarter in -8f..14f)
+        assertTrue("$half", half in -8f..14f)
+        assertTrue("$threeQuarters", threeQuarters in -8f..14f)
+        assertTrue(quarter < half && half < threeQuarters)
+        assertEquals(-45f, night.interpolate(noon, 0f).sunAltitude, 0f)
+        assertEquals(65f, night.interpolate(noon, 1f).sunAltitude, 0f)
+    }
 }

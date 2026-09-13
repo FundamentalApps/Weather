@@ -13,6 +13,7 @@ import android.os.Build
 import android.os.PowerManager
 import android.provider.Settings
 import androidx.annotation.RequiresApi
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animate
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
@@ -104,11 +105,16 @@ private fun rememberSkyTime(running: Boolean): State<Float> {
     return time
 }
 
+/** How long one sky takes to become another. */
+private const val SkyCrossfadeMillis = 3500
+
 @Composable
 private fun smoothSky(target: SkyState, animate: Boolean): State<SkyState> = produceState(target, target, animate) {
     if (!animate) { value = target; return@produceState }
     val start = value
-    if (start != target) animate(0f, 1f, animationSpec = tween(3500)) { fraction, _ ->
+    // Eased at both ends, and seen to be: SkyState.interpolate mixes the sun's height in the
+    // sky's own terms, so a night-to-day change is not a moment's flip in the middle of this.
+    if (start != target) animate(0f, 1f, animationSpec = tween(SkyCrossfadeMillis, easing = FastOutSlowInEasing)) { fraction, _ ->
         value = start.interpolate(target, fraction)
     }
 }
