@@ -43,6 +43,8 @@ WeatherApp / HomeScreen (Compose)
 
 **FundamentalOS API** (`FosApiClient`): a Ktor client with `kotlinx.serialization`. Endpoints: `snapshot` (lat/lon → current conditions, forecast, hourly, and air quality in one call), `reverse` (lat/lon → place), `search` (query → places), `mapLayers` (weather-map overlays), `locateByIp` (server-side IP geolocation).
 
+**Weather map** (`ui/screen/MapScreen.kt`, `ui/map/`): osmdroid with OpenStreetMap raster tiles underneath, drawn density-scaled, limited to one copy of the world. A field layer such as temperature is not tiled: `WeatherFieldStore` fetches it in whole square chunks of the world (level 0 is one image of the world, level 3 is 8 × 8), turns the source's categorical bands into a smooth colour field (`TemperatureField`), keeps the result in memory for the life of the app and on disk in `cacheDir/weather-field/`, and `WeatherFieldOverlay` stretches the chunk under the map at any zoom — so a pan or a zoom is a redraw, never a request.
+
 **Warnings & icons**: severity colors and weather-icon codes use a shared code format the backend returns — `WarningSeverity.fromSeverityColor`, `WarningIcons`, `WarningTheme`, and the `dayMaps` icon table — so labels do not depend on any single upstream source or on server language.
 
 **Location acquisition** (`MainViewModel`): tries system sources in priority order (GPS, network, passive, last-known) and falls back to the server's IP geolocation (`FosApiClient.locateByIp`) when they come up empty. The chosen location is passed as lat/lon to the provider.

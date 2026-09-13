@@ -10,10 +10,6 @@ import android.graphics.Color as AndroidColor
 import android.graphics.ColorMatrix
 import android.graphics.ColorMatrixColorFilter
 import android.graphics.Paint
-import android.graphics.drawable.BitmapDrawable
-import android.graphics.drawable.Drawable
-import java.io.FileInputStream
-import java.io.InputStream
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
@@ -63,6 +59,9 @@ import org.fundamentalos.weather.ui.componets.StatusBarAppearance
 import org.fundamentalos.weather.ui.componets.TemperatureField
 import org.fundamentalos.weather.ui.componets.ContinuityTileProvider
 import org.fundamentalos.weather.ui.componets.bottomEdgeBlur
+import org.fundamentalos.weather.ui.map.FieldLayerSource
+import org.fundamentalos.weather.ui.map.WeatherFieldOverlay
+import org.fundamentalos.weather.ui.map.WeatherFieldStore
 import org.fundamentalos.weather.ui.theme.PreviewThemeWithBg
 import org.fundamentalos.weather.viewmodel.MainViewModel
 import org.fundamentalos.weather.weather.provider.fos.FosApiClient
@@ -76,22 +75,29 @@ import org.koin.compose.viewmodel.koinViewModel
 import org.osmdroid.config.Configuration
 import org.osmdroid.tileprovider.tilesource.OnlineTileSourceBase
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
+import org.osmdroid.util.BoundingBox
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.util.MapTileIndex
+import org.osmdroid.util.TileSystem
 import org.osmdroid.views.CustomZoomButtonsController
 import org.osmdroid.views.MapView
 import org.osmdroid.views.Projection
 import org.osmdroid.views.overlay.Overlay
 import org.osmdroid.views.overlay.TilesOverlay
+import kotlin.math.log2
+import kotlin.math.max
 
-/** Start with a regional view of the temperature field. */
-private const val DefaultZoom = 6.0
+/**
+ * Open on the city and its neighbours, the way Apple Weather does: about 40 km across a phone.
+ * Zoom levels here count density-scaled tiles, so this means the same extent on every screen.
+ */
+private const val DefaultZoom = 10.0
 
-/** Half the width of the web mercator world, in metres; a WMS layer asks for tiles in these. */
-private const val WorldEdge = 20037508.342789244
+/** Close enough to place a district; the field has nothing finer to show past this. */
+private const val MaxZoom = 13.0
 
-/** Every layer here covers the world, so its own tiles start at the top. */
-private const val MinZoom = 1
+/** Every xyz layer here covers the world, so its own tiles start at the top. */
+private const val MinTileZoom = 1
 
 private val GoogleBlue = Color(0xFF4285F4)
 
@@ -119,6 +125,10 @@ private val DarkMapFilter = ColorMatrixColorFilter(
  * The tiles are fetched from their sources directly — OSM's policy forbids re-serving them and a
  * proxy would put every pan through our box — but which layers exist, where their tiles are and
  * what their colours mean all come from the server, so a source can change without a release.
+ *
+ * A field layer such as temperature is not tiled at all: it is fetched in whole square chunks of
+ * the world, a few screens wide at any zoom, that are kept across visits, so a pan or a zoom
+ * redraws the same bitmap instead of loading more.
  */
 @Composable
 fun MapScreen(
@@ -126,14 +136,19 @@ fun MapScreen(
     modifier: Modifier = Modifier,
     vm: MainViewModel = koinViewModel(),
     api: FosApiClient = koinInject(),
+    fieldStore: WeatherFieldStore = koinInject(),
 ) {
     val context = LocalContext.current
     val darkMap = isSystemInDarkTheme()
     val hazeState = remember { HazeState() }
-    var layers by remember { mutableStateOf<List<FosMapLayer>>(emptyList()) }
+    // Start from the list the last visit ended with, so the overlays are there before the
+    // server answers; a changed answer swaps them in place.
+    var layers by remember { mutableStateOf(fieldStore.layers ?: emptyList()) }
 
     LaunchedEffect(Unit) {
-        layers = runCatching { api.mapLayers().layers }.getOrDefault(emptyList())
+        val fresh = runCatching { api.mapLayers().layers }.getOrNull() ?: return@LaunchedEffect
+        fieldStore.layers = fresh
+        layers = fresh
     }
 
     // Temperature is always on. Radar and user layer switches are no longer part of this map.
@@ -162,7 +177,30 @@ fun MapScreen(
                 setMultiTouchControls(true)
                 zoomController.setVisibility(CustomZoomButtonsController.Visibility.NEVER)
                 setUseDataConnection(true)
+                // Tiles are drawn at density scale so labels are legible and zoom levels mean
+                // the same extent on every screen.
+                setTilesScaledToDpi(true)
+                // One world only: no second copy past the date line or beyond the poles, and no
+                // scrolling into the void around it.
+                isHorizontalMapRepetitionEnabled = false
+                isVerticalMapRepetitionEnabled = false
+                val tiles = MapView.getTileSystem()
+                setScrollableAreaLimitDouble(
+                    BoundingBox(tiles.maxLatitude, tiles.maxLongitude, tiles.minLatitude, tiles.minLongitude)
+                )
+                setMaxZoomLevel(MaxZoom)
+                // The furthest out is where the world just fills the longer side of the view;
+                // that needs the view's size, which arrives with the first layout.
+                addOnFirstLayoutListener { view, _, _, _, _ ->
+                    val fill = max(view.width, view.height).toDouble() / TileSystem.getTileSize()
+                    val floor = log2(fill).coerceAtLeast(0.0)
+                    setMinZoomLevel(floor)
+                    if (zoomLevelDouble < floor) controller.setZoom(floor)
+                }
                 controller.setZoom(DefaultZoom)
+                // Centre before the first draw: an overlay that draws at (0°, 0°) first would
+                // ask for the Gulf of Guinea before the place the user came here to see.
+                vm.currentLocation.value?.let { controller.setCenter(GeoPoint(it.latitude, it.longitude)) }
                 onResume()
             }
             mapView = ownedMap
@@ -198,11 +236,18 @@ fun MapScreen(
         }
     }
 
-    DisposableEffect(mapView, visible) {
+    // The overlays wait for a centre: a field overlay asks for the chunks under the view the
+    // first time it is drawn, and until the location is known that view is (0°, 0°).
+    DisposableEffect(mapView, visible, center == null) {
         val map = mapView ?: return@DisposableEffect onDispose { }
+        if (center == null) return@DisposableEffect onDispose { }
+        map.controller.setCenter(center)
         val overlays = visible.map { layer ->
-            layer.toOverlay(context, map, TemperatureField(layer.legend,
-                if (layer.scheme == "wms3857") TemperatureField.Radius else 0))
+            if (layer.scheme == "wms3857" && layer.legend.isNotEmpty()) {
+                WeatherFieldOverlay(map, FieldLayerSource(layer, TemperatureField(layer.legend)), fieldStore)
+            } else {
+                layer.toOverlay(context, map)
+            }
         }
         overlays.forEachIndexed { index, overlay -> map.overlays.add(index, overlay) }
         map.invalidate()
@@ -329,44 +374,16 @@ private fun LegendCard(layer: FosMapLayer, hazeState: HazeState, modifier: Modif
     }
 }
 
-/** A layer as osmdroid sees it: a tile source, its opacity, and nothing to draw while it loads. */
-private fun FosMapLayer.toOverlay(context: Context, map: MapView, field: TemperatureField?): TilesOverlay {
+/** An xyz layer as osmdroid sees it: a tile source, its opacity, and nothing to draw while it loads. */
+private fun FosMapLayer.toOverlay(context: Context, map: MapView): TilesOverlay {
     val layer = this
     val source = object : OnlineTileSourceBase(
-        // The name is the cache key: processed tiles must not land in the same drawer as the raw
-        // ones they were made from.
-        if (field == null) layer.id else "${layer.id}-temperature-continuous-v3-${layer.observedAt ?: 0}",
-        MinZoom, layer.maxZoom, layer.tileSize, ".png", arrayOf(layer.urlTemplate)
+        layer.id, MinTileZoom, layer.maxZoom, layer.tileSize, ".png", arrayOf(layer.urlTemplate)
     ) {
-        override fun getTileURLString(pMapTileIndex: Long): String {
-            val zoom = MapTileIndex.getZoom(pMapTileIndex)
-            val x = MapTileIndex.getX(pMapTileIndex)
-            val y = MapTileIndex.getY(pMapTileIndex)
-            return if (layer.scheme == "wms3857") {
-                layer.urlTemplate.replace("{bbox}", mercatorBounds(zoom, x, y, TemperatureField.Radius, layer.tileSize))
-                    .replace(Regex("(?i)([?&](?:width|height)=)\\d+")) {
-                        it.groupValues[1] + (layer.tileSize + TemperatureField.Radius * 2)
-                    }
-            } else {
-                layer.urlTemplate
-                    .replace("{z}", zoom.toString())
-                    .replace("{x}", x.toString())
-                    .replace("{y}", y.toString())
-            }
-        }
-
-        override fun getDrawable(aTileInputStream: InputStream): Drawable? {
-            if (field == null) return super.getDrawable(aTileInputStream)
-            val bitmap = field.decode(aTileInputStream) ?: return null
-            return BitmapDrawable(context.resources, bitmap)
-        }
-
-        /** The cache hands back the raw file it saved, so that path needs the same treatment. */
-        override fun getDrawable(aFilePath: String): Drawable? {
-            if (field == null) return super.getDrawable(aFilePath)
-            val bitmap = runCatching { FileInputStream(aFilePath).use(field::decode) }.getOrNull()
-            return bitmap?.let { BitmapDrawable(context.resources, it) }
-        }
+        override fun getTileURLString(pMapTileIndex: Long): String = layer.urlTemplate
+            .replace("{z}", MapTileIndex.getZoom(pMapTileIndex).toString())
+            .replace("{x}", MapTileIndex.getX(pMapTileIndex).toString())
+            .replace("{y}", MapTileIndex.getY(pMapTileIndex).toString())
     }
     // Keep cached parent tiles available during zoom changes while detailed tiles load.
     val provider = ContinuityTileProvider(context, source).apply {
@@ -390,15 +407,6 @@ private fun FosMapLayer.toOverlay(context: Context, map: MapView, field: Tempera
             )
         )
     }
-}
-
-/** The tile's own square in web mercator metres, which is what a WMS asks for. */
-private fun mercatorBounds(zoom: Int, x: Int, y: Int, gutter: Int = 0, tileSize: Int = 256): String {
-    val span = 2 * WorldEdge / (1 shl zoom)
-    val minX = -WorldEdge + x * span
-    val maxY = WorldEdge - y * span
-    val pad = span * gutter / tileSize
-    return "${minX - pad},${maxY - span - pad},${minX + span + pad},${maxY + pad}"
 }
 
 /** Where the home screen's location is, drawn as a dot rather than a pin. */

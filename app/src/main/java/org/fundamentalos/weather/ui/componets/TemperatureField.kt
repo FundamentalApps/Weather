@@ -5,22 +5,39 @@ import android.graphics.BitmapFactory
 import android.graphics.Color
 import org.fundamentalos.weather.weather.provider.fos.FosMapLegendStop
 import java.io.InputStream
-import kotlin.math.exp
 import kotlin.math.roundToInt
 
-/** Decode categorical source colours into temperatures, smooth values, then apply the legend.
- * Valid data always stays visible. WMS requests include a gutter so adjacent tiles filter the
- * same neighbourhood; missing source data remains transparent rather than becoming cold data.
+/**
+ * Turns a categorical temperature image into a smooth colour field.
+ *
+ * The source paints every model cell in one of the legend's band colours, so each pixel is read
+ * back as the middle of its band, the values are blurred over about one model cell, and the
+ * result is coloured again along the legend's gradient. Valid data always stays visible: the
+ * source's own coverage is kept as the alpha channel, so missing data stays transparent rather
+ * than turning into cold air.
  */
-class TemperatureField(legend: List<FosMapLegendStop>, private val gutter: Int = 0) {
+class TemperatureField(legend: List<FosMapLegendStop>) {
     private val stops = legend.sortedBy { it.value }
     private val colors = IntArray(stops.size) { Color.parseColor("#" + stops[it].color.removePrefix("#")) }
     private val degrees = FloatArray(stops.size) { stops[it].value }
-    private val kernel = FloatArray(Radius * 2 + 1) { exp(-((it - Radius) * (it - Radius)) / 72f) }
 
-    init { require(stops.isNotEmpty()) }
+    /** The legend gradient sampled every [LutStep] degrees, so colouring a pixel is one lookup. */
+    private val lut: IntArray
+    private val lutMin: Float = degrees.first()
 
-    fun decode(stream: InputStream): Bitmap? {
+    init {
+        require(stops.isNotEmpty())
+        val count = (((degrees.last() - lutMin) / LutStep).roundToInt() + 1).coerceAtLeast(1)
+        lut = IntArray(count) { colorAt(lutMin + it * LutStep) }
+    }
+
+    /**
+     * Decodes [stream], a source image [gutter] pixels wider on every side than the area wanted,
+     * smooths it with three box passes of [radius] (a Gaussian of about 1.1 × [radius]), and
+     * returns the inner area. The gutter lets neighbouring chunks blur over the same pixels, so
+     * two of them meet without a seam as long as [gutter] covers the blur's reach, 3 × [radius].
+     */
+    fun decode(stream: InputStream, gutter: Int = 0, radius: Int = 0): Bitmap? {
         val source = BitmapFactory.decodeStream(stream) ?: return null
         val w = source.width
         val h = source.height
@@ -28,44 +45,103 @@ class TemperatureField(legend: List<FosMapLegendStop>, private val gutter: Int =
         val pixels = IntArray(w * h)
         source.getPixels(pixels, 0, w, 0, 0, w, h)
         source.recycle()
-        val values = FloatArray(pixels.size)
-        val weights = FloatArray(pixels.size)
-        val translated = HashMap<Int, Float>()
+
+        var values = FloatArray(pixels.size)
+        var weights = FloatArray(pixels.size)
+        // A source has a few dozen colours at most and neighbouring pixels usually share one, so
+        // the translation is a small flat table with the last hit checked first. A HashMap here
+        // would box a key per pixel, which is most of the cost of a million-pixel chunk.
+        var knownColors = IntArray(64)
+        var knownValues = FloatArray(64)
+        var known = 0
+        var lastColor = -1
+        var lastValue = 0f
         for (i in pixels.indices) {
             val pixel = pixels[i]
             val weight = Color.alpha(pixel) / 255f
             weights[i] = weight
-            if (weight > 0f) values[i] = translated.getOrPut(pixel and 0xFFFFFF) {
-                degrees[nearestBand(pixel)]
-            } * weight
-        }
-        fun blur(input: FloatArray, horizontal: Boolean): FloatArray {
-            val output = FloatArray(input.size)
-            for (y in 0 until h) for (x in 0 until w) {
-                var sum = 0f
-                for (k in -Radius..Radius) {
-                    val sx = if (horizontal) (x + k).coerceIn(0, w - 1) else x
-                    val sy = if (horizontal) y else (y + k).coerceIn(0, h - 1)
-                    sum += input[sy * w + sx] * kernel[k + Radius]
+            if (weight == 0f) continue
+            val rgb = pixel and 0xFFFFFF
+            if (rgb != lastColor) {
+                var found = -1
+                for (k in 0 until known) if (knownColors[k] == rgb) { found = k; break }
+                if (found < 0) {
+                    if (known == knownColors.size) {
+                        knownColors = knownColors.copyOf(known * 2)
+                        knownValues = knownValues.copyOf(known * 2)
+                    }
+                    knownColors[known] = rgb
+                    knownValues[known] = degrees[nearestBand(rgb)]
+                    found = known++
                 }
-                output[y * w + x] = sum
+                lastColor = rgb
+                lastValue = knownValues[found]
             }
-            return output
+            values[i] = lastValue * weight
         }
-        val smoothValues = blur(blur(values, true), false)
-        val smoothWeights = blur(blur(weights, true), false)
+        val coverage = weights
+        if (radius > 0) {
+            val scratch = FloatArray(pixels.size)
+            values = boxBlur(values, scratch, w, h, radius)
+            weights = boxBlur(weights.copyOf(), scratch, w, h, radius)
+        }
+
         val outW = w - gutter * 2
         val outH = h - gutter * 2
         val output = IntArray(outW * outH)
-        for (y in 0 until outH) for (x in 0 until outW) {
-            val i = (y + gutter) * w + x + gutter
-            // Preserve the coverage mask; smoothing must not fabricate missing observations.
-            if (weights[i] > 0f && smoothWeights[i] > 0f) {
-                output[y * outW + x] = colorAt(smoothValues[i] / smoothWeights[i]) or
-                    ((weights[i] * 255).roundToInt() shl 24)
+        for (y in 0 until outH) {
+            val row = (y + gutter) * w + gutter
+            val outRow = y * outW
+            for (x in 0 until outW) {
+                val i = row + x
+                // Preserve the coverage mask; smoothing must not fabricate missing observations.
+                if (coverage[i] > 0f && weights[i] > 0f) {
+                    output[outRow + x] = colorFor(values[i] / weights[i]) or
+                        ((coverage[i] * 255).roundToInt() shl 24)
+                }
             }
         }
         return Bitmap.createBitmap(output, outW, outH, Bitmap.Config.ARGB_8888)
+    }
+
+    /**
+     * Three passes of a running-sum box filter in each direction. That is within a few percent of
+     * a Gaussian, and its cost does not grow with the radius, which matters for a chunk of a
+     * million pixels on a phone. Edges are clamped. The result lands in [input]; [scratch] is
+     * the same size and is clobbered.
+     */
+    private fun boxBlur(input: FloatArray, scratch: FloatArray, w: Int, h: Int, radius: Int): FloatArray {
+        var src = input
+        var dst = scratch
+        repeat(3) {
+            boxPass(src, dst, w, h, radius, horizontal = true)
+            boxPass(dst, src, w, h, radius, horizontal = false)
+        }
+        return src
+    }
+
+    private fun boxPass(src: FloatArray, dst: FloatArray, w: Int, h: Int, radius: Int, horizontal: Boolean) {
+        val length = if (horizontal) w else h
+        val lines = if (horizontal) h else w
+        val stride = if (horizontal) 1 else w
+        val norm = 1f / (radius * 2 + 1)
+        for (line in 0 until lines) {
+            val start = if (horizontal) line * w else line
+            // Seed the window with the clamped left edge, then slide it along the line.
+            var sum = src[start] * (radius + 1)
+            for (k in 1..radius) sum += src[start + minOf(k, length - 1) * stride]
+            for (i in 0 until length) {
+                dst[start + i * stride] = sum * norm
+                val enter = minOf(i + radius + 1, length - 1)
+                val leave = maxOf(i - radius, 0)
+                sum += src[start + enter * stride] - src[start + leave * stride]
+            }
+        }
+    }
+
+    private fun colorFor(value: Float): Int {
+        val index = ((value - lutMin) / LutStep).roundToInt().coerceIn(0, lut.size - 1)
+        return lut[index]
     }
 
     private fun colorAt(value: Float): Int {
@@ -90,6 +166,6 @@ class TemperatureField(legend: List<FosMapLegendStop>, private val gutter: Int =
     }
 
     companion object {
-        const val Radius = 16
+        private const val LutStep = 0.1f
     }
 }
