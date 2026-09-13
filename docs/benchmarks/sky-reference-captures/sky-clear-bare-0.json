@@ -1,0 +1,31 @@
+{
+  "runId": "sky-clear-bare-0",
+  "renderer": "sky",
+  "scene": "clear",
+  "workload": "bare",
+  "device": "Pixel 9 Pro",
+  "sdk": 37,
+  "debuggable": false,
+  "width": 960,
+  "height": 2142,
+  "warmupMs": 800,
+  "measurementMs": 1001,
+  "frames": 0,
+  "renderedFps": 0,
+  "callbackDrops": 0,
+  "missedDeadlines": 0,
+  "deadlineFrames": 0,
+  "processCpuMs": 1,
+  "pssKb": 95957,
+  "thermalStart": 0,
+  "thermalEnd": 0,
+  "powerSave": false,
+  "rawColumns": [
+    "totalMs",
+    "gpuMs",
+    "deadlineMs",
+    "drawMs",
+    "intendedVsyncNs"
+  ],
+  "rawFrames": []
+}

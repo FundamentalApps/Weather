@@ -1,0 +1,31 @@
+{
+  "runId": "compat-partly_cloudy-glass-0",
+  "renderer": "compat",
+  "scene": "partly_cloudy",
+  "workload": "glass",
+  "device": "Pixel 9 Pro",
+  "sdk": 37,
+  "debuggable": false,
+  "width": 960,
+  "height": 2142,
+  "warmupMs": 1000,
+  "measurementMs": 1002,
+  "frames": 0,
+  "renderedFps": 0,
+  "callbackDrops": 0,
+  "missedDeadlines": 0,
+  "deadlineFrames": 0,
+  "processCpuMs": 1,
+  "pssKb": 200934,
+  "thermalStart": 0,
+  "thermalEnd": 0,
+  "powerSave": false,
+  "rawColumns": [
+    "totalMs",
+    "gpuMs",
+    "deadlineMs",
+    "drawMs",
+    "intendedVsyncNs"
+  ],
+  "rawFrames": []
+}

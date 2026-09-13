@@ -1,0 +1,170 @@
+--------- beginning of crash
+09-11 14:49:53.663  3451  3451 E AndroidRuntime: FATAL EXCEPTION: main
+09-11 14:49:53.663  3451  3451 E AndroidRuntime: Process: com.google.android.as, PID: 3451
+09-11 14:49:53.663  3451  3451 E AndroidRuntime: java.lang.RuntimeException: Unable to start receiver com.google.intelligence.sense.ondemand.InternalBroadcastReceiver
+09-11 14:49:53.663  3451  3451 E AndroidRuntime: 	at android.app.ActivityThread.handleReceiver(ActivityThread.java:5393)
+09-11 14:49:53.663  3451  3451 E AndroidRuntime: 	at android.app.ActivityThread.-$$Nest$mhandleReceiver(ActivityThread.java:0)
+09-11 14:49:53.663  3451  3451 E AndroidRuntime: 	at android.app.ActivityThread$H.handleMessage(ActivityThread.java:2786)
+09-11 14:49:53.663  3451  3451 E AndroidRuntime: 	at android.os.Handler.dispatchMessageImpl(Handler.java:142)
+09-11 14:49:53.663  3451  3451 E AndroidRuntime: 	at android.os.Handler.dispatchMessage(Handler.java:125)
+09-11 14:49:53.663  3451  3451 E AndroidRuntime: 	at android.os.Looper.loopOnce(Looper.java:296)
+09-11 14:49:53.663  3451  3451 E AndroidRuntime: 	at android.os.Looper.loop(Looper.java:397)
+09-11 14:49:53.663  3451  3451 E AndroidRuntime: 	at android.app.ActivityThread.main(ActivityThread.java:9523)
+09-11 14:49:53.663  3451  3451 E AndroidRuntime: 	at java.lang.reflect.Method.invoke(Native Method)
+09-11 14:49:53.663  3451  3451 E AndroidRuntime: 	at com.android.internal.os.RuntimeInit$MethodAndArgsCaller.run(RuntimeInit.java:575)
+09-11 14:49:53.663  3451  3451 E AndroidRuntime: 	at com.android.internal.os.ZygoteInit.main(ZygoteInit.java:939)
+09-11 14:49:53.663  3451  3451 E AndroidRuntime: Caused by: java.lang.NullPointerException: Attempt to invoke virtual method 'java.util.concurrent.CompletableFuture java.util.concurrent.CompletableFuture.thenAcceptAsync(java.util.function.Consumer, java.util.concurrent.Executor)' on a null object reference
+09-11 14:49:53.663  3451  3451 E AndroidRuntime: 	at android.os.Parcel.createExceptionOrNull(Parcel.java:3398)
+09-11 14:49:53.663  3451  3451 E AndroidRuntime: 	at android.os.Parcel.createException(Parcel.java:3376)
+09-11 14:49:53.663  3451  3451 E AndroidRuntime: 	at android.os.Parcel.readException(Parcel.java:3359)
+09-11 14:49:53.663  3451  3451 E AndroidRuntime: 	at android.os.Parcel.readException(Parcel.java:3301)
+09-11 14:49:53.663  3451  3451 E AndroidRuntime: 	at android.media.musicrecognition.IMusicRecognitionManager$Stub$Proxy.beginRecognition(IMusicRecognitionManager.java:126)
+09-11 14:49:53.663  3451  3451 E AndroidRuntime: 	at android.media.musicrecognition.MusicRecognitionManager.beginStreamingSearch(MusicRecognitionManager.java:140)
+09-11 14:49:53.663  3451  3451 E AndroidRuntime: 	at ahmv.a(PG:9)
+09-11 14:49:53.663  3451  3451 E AndroidRuntime: 	at ahmr.d(PG:110)
+09-11 14:49:53.663  3451  3451 E AndroidRuntime: 	at ahmr.bt(PG:46)
+09-11 14:49:53.663  3451  3451 E AndroidRuntime: 	at ahmr.b(PG:138)
+09-11 14:49:53.663  3451  3451 E AndroidRuntime: 	at com.google.intelligence.sense.ondemand.InternalBroadcastReceiver.onReceive(PG:69)
+09-11 14:49:53.663  3451  3451 E AndroidRuntime: 	at android.app.ActivityThread.handleReceiver(ActivityThread.java:5386)
+09-11 14:49:53.663  3451  3451 E AndroidRuntime: 	... 10 more
+09-11 14:49:53.663  3451  3451 E AndroidRuntime: Caused by: android.os.RemoteException: Remote stack trace:
+09-11 14:49:53.663  3451  3451 E AndroidRuntime: 	at com.android.server.musicrecognition.MusicRecognitionManagerPerUserService.beginRecognitionLocked(MusicRecognitionManagerPerUserService.java:196)
+09-11 14:49:53.663  3451  3451 E AndroidRuntime: 	at com.android.server.musicrecognition.MusicRecognitionManagerService$MusicRecognitionManagerStub.beginRecognition(MusicRecognitionManagerService.java:126)
+09-11 14:49:53.663  3451  3451 E AndroidRuntime: 	at android.media.musicrecognition.IMusicRecognitionManager$Stub.onTransact(IMusicRecognitionManager.java:91)
+09-11 14:49:53.663  3451  3451 E AndroidRuntime: 	at android.os.Binder.execTransactInternal(Binder.java:1369)
+09-11 14:49:53.663  3451  3451 E AndroidRuntime: 	at android.os.Binder.execTransact(Binder.java:1323)
+09-11 14:49:53.663  3451  3451 E AndroidRuntime: 
+09-11 16:11:25.656  6513  6513 E AndroidRuntime: FATAL EXCEPTION: main
+09-11 16:11:25.656  6513  6513 E AndroidRuntime: Process: com.google.android.as, PID: 6513
+09-11 16:11:25.656  6513  6513 E AndroidRuntime: java.lang.RuntimeException: Unable to start receiver com.google.intelligence.sense.ondemand.InternalBroadcastReceiver
+09-11 16:11:25.656  6513  6513 E AndroidRuntime: 	at android.app.ActivityThread.handleReceiver(ActivityThread.java:5393)
+09-11 16:11:25.656  6513  6513 E AndroidRuntime: 	at android.app.ActivityThread.-$$Nest$mhandleReceiver(ActivityThread.java:0)
+09-11 16:11:25.656  6513  6513 E AndroidRuntime: 	at android.app.ActivityThread$H.handleMessage(ActivityThread.java:2786)
+09-11 16:11:25.656  6513  6513 E AndroidRuntime: 	at android.os.Handler.dispatchMessageImpl(Handler.java:142)
+09-11 16:11:25.656  6513  6513 E AndroidRuntime: 	at android.os.Handler.dispatchMessage(Handler.java:125)
+09-11 16:11:25.656  6513  6513 E AndroidRuntime: 	at android.os.Looper.loopOnce(Looper.java:296)
+09-11 16:11:25.656  6513  6513 E AndroidRuntime: 	at android.os.Looper.loop(Looper.java:397)
+09-11 16:11:25.656  6513  6513 E AndroidRuntime: 	at android.app.ActivityThread.main(ActivityThread.java:9523)
+09-11 16:11:25.656  6513  6513 E AndroidRuntime: 	at java.lang.reflect.Method.invoke(Native Method)
+09-11 16:11:25.656  6513  6513 E AndroidRuntime: 	at com.android.internal.os.RuntimeInit$MethodAndArgsCaller.run(RuntimeInit.java:575)
+09-11 16:11:25.656  6513  6513 E AndroidRuntime: 	at com.android.internal.os.ZygoteInit.main(ZygoteInit.java:939)
+09-11 16:11:25.656  6513  6513 E AndroidRuntime: Caused by: java.lang.NullPointerException: Attempt to invoke virtual method 'java.util.concurrent.CompletableFuture java.util.concurrent.CompletableFuture.thenAcceptAsync(java.util.function.Consumer, java.util.concurrent.Executor)' on a null object reference
+09-11 16:11:25.656  6513  6513 E AndroidRuntime: 	at android.os.Parcel.createExceptionOrNull(Parcel.java:3398)
+09-11 16:11:25.656  6513  6513 E AndroidRuntime: 	at android.os.Parcel.createException(Parcel.java:3376)
+09-11 16:11:25.656  6513  6513 E AndroidRuntime: 	at android.os.Parcel.readException(Parcel.java:3359)
+09-11 16:11:25.656  6513  6513 E AndroidRuntime: 	at android.os.Parcel.readException(Parcel.java:3301)
+09-11 16:11:25.656  6513  6513 E AndroidRuntime: 	at android.media.musicrecognition.IMusicRecognitionManager$Stub$Proxy.beginRecognition(IMusicRecognitionManager.java:126)
+09-11 16:11:25.656  6513  6513 E AndroidRuntime: 	at android.media.musicrecognition.MusicRecognitionManager.beginStreamingSearch(MusicRecognitionManager.java:140)
+09-11 16:11:25.656  6513  6513 E AndroidRuntime: 	at ahmv.a(PG:9)
+09-11 16:11:25.656  6513  6513 E AndroidRuntime: 	at ahmr.d(PG:110)
+09-11 16:11:25.656  6513  6513 E AndroidRuntime: 	at ahmr.bt(PG:46)
+09-11 16:11:25.656  6513  6513 E AndroidRuntime: 	at ahmr.b(PG:138)
+09-11 16:11:25.656  6513  6513 E AndroidRuntime: 	at com.google.intelligence.sense.ondemand.InternalBroadcastReceiver.onReceive(PG:69)
+09-11 16:11:25.656  6513  6513 E AndroidRuntime: 	at android.app.ActivityThread.handleReceiver(ActivityThread.java:5386)
+09-11 16:11:25.656  6513  6513 E AndroidRuntime: 	... 10 more
+09-11 16:11:25.656  6513  6513 E AndroidRuntime: Caused by: android.os.RemoteException: Remote stack trace:
+09-11 16:11:25.656  6513  6513 E AndroidRuntime: 	at com.android.server.musicrecognition.MusicRecognitionManagerPerUserService.beginRecognitionLocked(MusicRecognitionManagerPerUserService.java:196)
+09-11 16:11:25.656  6513  6513 E AndroidRuntime: 	at com.android.server.musicrecognition.MusicRecognitionManagerService$MusicRecognitionManagerStub.beginRecognition(MusicRecognitionManagerService.java:126)
+09-11 16:11:25.656  6513  6513 E AndroidRuntime: 	at android.media.musicrecognition.IMusicRecognitionManager$Stub.onTransact(IMusicRecognitionManager.java:91)
+09-11 16:11:25.656  6513  6513 E AndroidRuntime: 	at android.os.Binder.execTransactInternal(Binder.java:1369)
+09-11 16:11:25.656  6513  6513 E AndroidRuntime: 	at android.os.Binder.execTransact(Binder.java:1323)
+09-11 16:11:25.656  6513  6513 E AndroidRuntime: 
+09-11 21:22:07.638 10564 10564 E AndroidRuntime: FATAL EXCEPTION: main
+09-11 21:22:07.638 10564 10564 E AndroidRuntime: Process: com.google.android.as, PID: 10564
+09-11 21:22:07.638 10564 10564 E AndroidRuntime: java.lang.RuntimeException: Unable to start receiver com.google.intelligence.sense.ondemand.InternalBroadcastReceiver
+09-11 21:22:07.638 10564 10564 E AndroidRuntime: 	at android.app.ActivityThread.handleReceiver(ActivityThread.java:5393)
+09-11 21:22:07.638 10564 10564 E AndroidRuntime: 	at android.app.ActivityThread.-$$Nest$mhandleReceiver(ActivityThread.java:0)
+09-11 21:22:07.638 10564 10564 E AndroidRuntime: 	at android.app.ActivityThread$H.handleMessage(ActivityThread.java:2786)
+09-11 21:22:07.638 10564 10564 E AndroidRuntime: 	at android.os.Handler.dispatchMessageImpl(Handler.java:142)
+09-11 21:22:07.638 10564 10564 E AndroidRuntime: 	at android.os.Handler.dispatchMessage(Handler.java:125)
+09-11 21:22:07.638 10564 10564 E AndroidRuntime: 	at android.os.Looper.loopOnce(Looper.java:296)
+09-11 21:22:07.638 10564 10564 E AndroidRuntime: 	at android.os.Looper.loop(Looper.java:397)
+09-11 21:22:07.638 10564 10564 E AndroidRuntime: 	at android.app.ActivityThread.main(ActivityThread.java:9523)
+09-11 21:22:07.638 10564 10564 E AndroidRuntime: 	at java.lang.reflect.Method.invoke(Native Method)
+09-11 21:22:07.638 10564 10564 E AndroidRuntime: 	at com.android.internal.os.RuntimeInit$MethodAndArgsCaller.run(RuntimeInit.java:575)
+09-11 21:22:07.638 10564 10564 E AndroidRuntime: 	at com.android.internal.os.ZygoteInit.main(ZygoteInit.java:939)
+09-11 21:22:07.638 10564 10564 E AndroidRuntime: Caused by: java.lang.NullPointerException: Attempt to invoke virtual method 'java.util.concurrent.CompletableFuture java.util.concurrent.CompletableFuture.thenAcceptAsync(java.util.function.Consumer, java.util.concurrent.Executor)' on a null object reference
+09-11 21:22:07.638 10564 10564 E AndroidRuntime: 	at android.os.Parcel.createExceptionOrNull(Parcel.java:3398)
+09-11 21:22:07.638 10564 10564 E AndroidRuntime: 	at android.os.Parcel.createException(Parcel.java:3376)
+09-11 21:22:07.638 10564 10564 E AndroidRuntime: 	at android.os.Parcel.readException(Parcel.java:3359)
+09-11 21:22:07.638 10564 10564 E AndroidRuntime: 	at android.os.Parcel.readException(Parcel.java:3301)
+09-11 21:22:07.638 10564 10564 E AndroidRuntime: 	at android.media.musicrecognition.IMusicRecognitionManager$Stub$Proxy.beginRecognition(IMusicRecognitionManager.java:126)
+09-11 21:22:07.638 10564 10564 E AndroidRuntime: 	at android.media.musicrecognition.MusicRecognitionManager.beginStreamingSearch(MusicRecognitionManager.java:140)
+09-11 21:22:07.638 10564 10564 E AndroidRuntime: 	at ahmv.a(PG:9)
+09-11 21:22:07.638 10564 10564 E AndroidRuntime: 	at ahmr.d(PG:110)
+09-11 21:22:07.638 10564 10564 E AndroidRuntime: 	at ahmr.bt(PG:46)
+09-11 21:22:07.638 10564 10564 E AndroidRuntime: 	at ahmr.b(PG:138)
+09-11 21:22:07.638 10564 10564 E AndroidRuntime: 	at com.google.intelligence.sense.ondemand.InternalBroadcastReceiver.onReceive(PG:69)
+09-11 21:22:07.638 10564 10564 E AndroidRuntime: 	at android.app.ActivityThread.handleReceiver(ActivityThread.java:5386)
+09-11 21:22:07.638 10564 10564 E AndroidRuntime: 	... 10 more
+09-11 21:22:07.638 10564 10564 E AndroidRuntime: Caused by: android.os.RemoteException: Remote stack trace:
+09-11 21:22:07.638 10564 10564 E AndroidRuntime: 	at com.android.server.musicrecognition.MusicRecognitionManagerPerUserService.beginRecognitionLocked(MusicRecognitionManagerPerUserService.java:196)
+09-11 21:22:07.638 10564 10564 E AndroidRuntime: 	at com.android.server.musicrecognition.MusicRecognitionManagerService$MusicRecognitionManagerStub.beginRecognition(MusicRecognitionManagerService.java:126)
+09-11 21:22:07.638 10564 10564 E AndroidRuntime: 	at android.media.musicrecognition.IMusicRecognitionManager$Stub.onTransact(IMusicRecognitionManager.java:91)
+09-11 21:22:07.638 10564 10564 E AndroidRuntime: 	at android.os.Binder.execTransactInternal(Binder.java:1369)
+09-11 21:22:07.638 10564 10564 E AndroidRuntime: 	at android.os.Binder.execTransact(Binder.java:1323)
+09-11 21:22:07.638 10564 10564 E AndroidRuntime: 
+09-11 21:53:39.827 27005 27005 E AndroidRuntime: FATAL EXCEPTION: main
+09-11 21:53:39.827 27005 27005 E AndroidRuntime: Process: com.google.android.as, PID: 27005
+09-11 21:53:39.827 27005 27005 E AndroidRuntime: java.lang.RuntimeException: Unable to start receiver com.google.intelligence.sense.ondemand.InternalBroadcastReceiver
+09-11 21:53:39.827 27005 27005 E AndroidRuntime: 	at android.app.ActivityThread.handleReceiver(ActivityThread.java:5393)
+09-11 21:53:39.827 27005 27005 E AndroidRuntime: 	at android.app.ActivityThread.-$$Nest$mhandleReceiver(ActivityThread.java:0)
+09-11 21:53:39.827 27005 27005 E AndroidRuntime: 	at android.app.ActivityThread$H.handleMessage(ActivityThread.java:2786)
+09-11 21:53:39.827 27005 27005 E AndroidRuntime: 	at android.os.Handler.dispatchMessageImpl(Handler.java:142)
+09-11 21:53:39.827 27005 27005 E AndroidRuntime: 	at android.os.Handler.dispatchMessage(Handler.java:125)
+09-11 21:53:39.827 27005 27005 E AndroidRuntime: 	at android.os.Looper.loopOnce(Looper.java:296)
+09-11 21:53:39.827 27005 27005 E AndroidRuntime: 	at android.os.Looper.loop(Looper.java:397)
+09-11 21:53:39.827 27005 27005 E AndroidRuntime: 	at android.app.ActivityThread.main(ActivityThread.java:9523)
+09-11 21:53:39.827 27005 27005 E AndroidRuntime: 	at java.lang.reflect.Method.invoke(Native Method)
+09-11 21:53:39.827 27005 27005 E AndroidRuntime: 	at com.android.internal.os.RuntimeInit$MethodAndArgsCaller.run(RuntimeInit.java:575)
+09-11 21:53:39.827 27005 27005 E AndroidRuntime: 	at com.android.internal.os.ZygoteInit.main(ZygoteInit.java:939)
+09-11 21:53:39.827 27005 27005 E AndroidRuntime: Caused by: java.lang.NullPointerException: Attempt to invoke virtual method 'java.util.concurrent.CompletableFuture java.util.concurrent.CompletableFuture.thenAcceptAsync(java.util.function.Consumer, java.util.concurrent.Executor)' on a null object reference
+09-11 21:53:39.827 27005 27005 E AndroidRuntime: 	at android.os.Parcel.createExceptionOrNull(Parcel.java:3398)
+09-11 21:53:39.827 27005 27005 E AndroidRuntime: 	at android.os.Parcel.createException(Parcel.java:3376)
+09-11 21:53:39.827 27005 27005 E AndroidRuntime: 	at android.os.Parcel.readException(Parcel.java:3359)
+09-11 21:53:39.827 27005 27005 E AndroidRuntime: 	at android.os.Parcel.readException(Parcel.java:3301)
+09-11 21:53:39.827 27005 27005 E AndroidRuntime: 	at android.media.musicrecognition.IMusicRecognitionManager$Stub$Proxy.beginRecognition(IMusicRecognitionManager.java:126)
+09-11 21:53:39.827 27005 27005 E AndroidRuntime: 	at android.media.musicrecognition.MusicRecognitionManager.beginStreamingSearch(MusicRecognitionManager.java:140)
+09-11 21:53:39.827 27005 27005 E AndroidRuntime: 	at ahmv.a(PG:9)
+09-11 21:53:39.827 27005 27005 E AndroidRuntime: 	at ahmr.d(PG:110)
+09-11 21:53:39.827 27005 27005 E AndroidRuntime: 	at ahmr.bt(PG:46)
+09-11 21:53:39.827 27005 27005 E AndroidRuntime: 	at ahmr.b(PG:138)
+09-11 21:53:39.827 27005 27005 E AndroidRuntime: 	at com.google.intelligence.sense.ondemand.InternalBroadcastReceiver.onReceive(PG:69)
+09-11 21:53:39.827 27005 27005 E AndroidRuntime: 	at android.app.ActivityThread.handleReceiver(ActivityThread.java:5386)
+09-11 21:53:39.827 27005 27005 E AndroidRuntime: 	... 10 more
+09-11 21:53:39.827 27005 27005 E AndroidRuntime: Caused by: android.os.RemoteException: Remote stack trace:
+09-11 21:53:39.827 27005 27005 E AndroidRuntime: 	at com.android.server.musicrecognition.MusicRecognitionManagerPerUserService.beginRecognitionLocked(MusicRecognitionManagerPerUserService.java:196)
+09-11 21:53:39.827 27005 27005 E AndroidRuntime: 	at com.android.server.musicrecognition.MusicRecognitionManagerService$MusicRecognitionManagerStub.beginRecognition(MusicRecognitionManagerService.java:126)
+09-11 21:53:39.827 27005 27005 E AndroidRuntime: 	at android.media.musicrecognition.IMusicRecognitionManager$Stub.onTransact(IMusicRecognitionManager.java:91)
+09-11 21:53:39.827 27005 27005 E AndroidRuntime: 	at android.os.Binder.execTransactInternal(Binder.java:1369)
+09-11 21:53:39.827 27005 27005 E AndroidRuntime: 	at android.os.Binder.execTransact(Binder.java:1323)
+09-11 21:53:39.827 27005 27005 E AndroidRuntime: 
+09-11 23:14:38.514 30168 30168 E AndroidRuntime: FATAL EXCEPTION: main
+09-11 23:14:38.514 30168 30168 E AndroidRuntime: Process: org.fundamentalos.weather.benchmark, PID: 30168
+09-11 23:14:38.514 30168 30168 E AndroidRuntime: java.lang.IllegalArgumentException: Window doesn't have a backing surface!
+09-11 23:14:38.514 30168 30168 E AndroidRuntime: 	at android.view.PixelCopy.sourceForWindow(PixelCopy.java:296)
+09-11 23:14:38.514 30168 30168 E AndroidRuntime: 	at android.view.PixelCopy.request(PixelCopy.java:261)
+09-11 23:14:38.514 30168 30168 E AndroidRuntime: 	at android.view.PixelCopy.request(PixelCopy.java:225)
+09-11 23:14:38.514 30168 30168 E AndroidRuntime: 	at org.fundamentalos.weather.ui.componets.GlassMaterialKt$$ExternalSyntheticApiModelOutline0.m(D8$$SyntheticClass:0)
+09-11 23:14:38.514 30168 30168 E AndroidRuntime: 	at org.fundamentalos.weather.benchmark.SkyBenchmarkActivity.capture(SkyBenchmarkActivity.kt:138)
+09-11 23:14:38.514 30168 30168 E AndroidRuntime: 	at org.fundamentalos.weather.benchmark.SkyBenchmarkActivity.access$capture(SkyBenchmarkActivity.kt:44)
+09-11 23:14:38.514 30168 30168 E AndroidRuntime: 	at org.fundamentalos.weather.benchmark.SkyBenchmarkActivity$onCreate$3.invokeSuspend(SkyBenchmarkActivity.kt:91)
+09-11 23:14:38.514 30168 30168 E AndroidRuntime: 	at kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:34)
+09-11 23:14:38.514 30168 30168 E AndroidRuntime: 	at kotlinx.coroutines.DispatchedTaskKt.resume(DispatchedTask.kt:233)
+09-11 23:14:38.514 30168 30168 E AndroidRuntime: 	at kotlinx.coroutines.DispatchedTaskKt.dispatch(DispatchedTask.kt:152)
+09-11 23:14:38.514 30168 30168 E AndroidRuntime: 	at kotlinx.coroutines.CancellableContinuationImpl.dispatchResume(CancellableContinuationImpl.kt:470)
+09-11 23:14:38.514 30168 30168 E AndroidRuntime: 	at kotlinx.coroutines.CancellableContinuationImpl.resumeImpl$kotlinx_coroutines_core(CancellableContinuationImpl.kt:504)
+09-11 23:14:38.514 30168 30168 E AndroidRuntime: 	at kotlinx.coroutines.CancellableContinuationImpl.resumeImpl$kotlinx_coroutines_core$default(CancellableContinuationImpl.kt:493)
+09-11 23:14:38.514 30168 30168 E AndroidRuntime: 	at kotlinx.coroutines.CancellableContinuationImpl.resumeUndispatched(CancellableContinuationImpl.kt:596)
+09-11 23:14:38.514 30168 30168 E AndroidRuntime: 	at kotlinx.coroutines.android.HandlerContext.scheduleResumeAfterDelay$lambda$1(HandlerDispatcher.kt:141)
+09-11 23:14:38.514 30168 30168 E AndroidRuntime: 	at kotlinx.coroutines.android.HandlerContext$$ExternalSyntheticLambda1.run(D8$$SyntheticClass:0)
+09-11 23:14:38.514 30168 30168 E AndroidRuntime: 	at android.os.Handler.handleCallback(Handler.java:1095)
+09-11 23:14:38.514 30168 30168 E AndroidRuntime: 	at android.os.Handler.dispatchMessageImpl(Handler.java:135)
+09-11 23:14:38.514 30168 30168 E AndroidRuntime: 	at android.os.Handler.dispatchMessage(Handler.java:125)
+09-11 23:14:38.514 30168 30168 E AndroidRuntime: 	at android.os.Looper.loopOnce(Looper.java:296)
+09-11 23:14:38.514 30168 30168 E AndroidRuntime: 	at android.os.Looper.loop(Looper.java:397)
+09-11 23:14:38.514 30168 30168 E AndroidRuntime: 	at android.app.ActivityThread.main(ActivityThread.java:9523)
+09-11 23:14:38.514 30168 30168 E AndroidRuntime: 	at java.lang.reflect.Method.invoke(Native Method)
+09-11 23:14:38.514 30168 30168 E AndroidRuntime: 	at com.android.internal.os.RuntimeInit$MethodAndArgsCaller.run(RuntimeInit.java:575)
+09-11 23:14:38.514 30168 30168 E AndroidRuntime: 	at com.android.internal.os.ZygoteInit.main(ZygoteInit.java:939)
+09-11 23:14:38.514 30168 30168 E AndroidRuntime: 	Suppressed: kotlinx.coroutines.internal.DiagnosticCoroutineContextException: [StandaloneCoroutine{Cancelling}@f3cea15, Dispatchers.Main.immediate]

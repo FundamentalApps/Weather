@@ -1,76 +1,98 @@
-import org.gradle.process.internal.DefaultExecOperations
-import java.io.ByteArrayOutputStream
-import java.nio.charset.Charset
+import com.android.build.api.dsl.ApplicationExtension
+import com.google.devtools.ksp.gradle.KspExtension
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.jetbrains.kotlin.gradle.dsl.KotlinAndroidProjectExtension
 import java.util.Properties
 
 plugins {
     alias(libs.plugins.android.application)
-    alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.ksp)
 }
 
-fun getVersionCode(): Int {
-    val output = ByteArrayOutputStream()
-    exec {
-        commandLine("git", "rev-list", "--count", "--first-parent", "HEAD")
-        standardOutput = output
+val gitVersionCode = providers.exec {
+    commandLine("git", "rev-list", "--count", "--first-parent", "HEAD")
+}.standardOutput.asText.map { it.trim().toInt() }
+
+val gitVersionName = providers.exec {
+    commandLine("git", "describe", "--tags", "--match", "v[0-9]*")
+}.standardOutput.asText.map { it.trim().removePrefix("v") }
+
+val localProperties = Properties().apply {
+    val file = rootProject.file("local.properties")
+    if (file.isFile) {
+        file.inputStream().use(::load)
     }
-    return output.toByteArray().toString(Charset.defaultCharset()).trim().toInt()
 }
 
-fun getVersionName(): String {
-    val output = ByteArrayOutputStream()
-    exec {
-        commandLine("git", "describe", "--tags", "--match", "v[0-9]*")
-        standardOutput = output
-    }
-    return output.toByteArray().toString(Charset.defaultCharset())
-        .trim()
-        .trimStart('v') // 去掉 v 前缀
+fun localStringProperty(name: String): String {
+    val value = localProperties.getProperty(name)
+        ?: error("Missing '$name' in local.properties")
+    return "\"${value.trim().trim('"')}\""
 }
 
-android {
-    namespace = "ink.duo3.caelum"
-    compileSdk = 35
+fun localStringPropertyOr(name: String, default: String): String {
+    val value = localProperties.getProperty(name)?.trim()?.trim('"')?.takeIf { it.isNotBlank() } ?: default
+    return "\"$value\""
+}
+
+extensions.configure<ApplicationExtension>("android") {
+    namespace = "org.fundamentalos.weather"
+    compileSdk = 37
 
     defaultConfig {
-        applicationId = "ink.duo3.caelum"
+        applicationId = "org.fundamentalos.weather"
         minSdk = 24
         targetSdk = 35
-        versionCode = getVersionCode()
-        versionName = getVersionName()
+        versionCode = gitVersionCode.get()
+        versionName = gitVersionName.get()
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        // FundamentalOS API; override with app.fosApiBaseUrl in local.properties (e.g. a local dev server).
+        buildConfigField("String", "FOS_API_BASE_URL", localStringPropertyOr("app.fosApiBaseUrl", "https://api.fundamentalos.org"))
     }
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
+                "proguard-rules.pro",
             )
-            val props = Properties().apply { load(rootProject.file("local.properties").inputStream()) }
-            buildConfigField("String", "API_BASE_URL", props.getProperty("app.apiBaseUrl.prod"))
+            buildConfigField("String", "API_BASE_URL", localStringProperty("app.apiBaseUrl.prod"))
+        }
+        create("benchmark") {
+            initWith(getByName("release"))
+            isDebuggable = false
+            isMinifyEnabled = false
+            isShrinkResources = false
+            signingConfig = signingConfigs.getByName("debug")
+            applicationIdSuffix = ".benchmark"
+            matchingFallbacks += "release"
         }
         debug {
-            val props = Properties().apply { load(rootProject.file("local.properties").inputStream()) }
-            buildConfigField("String", "API_BASE_URL", props.getProperty("app.apiBaseUrl.dev"))
+            buildConfigField("String", "API_BASE_URL", localStringProperty("app.apiBaseUrl.dev"))
         }
     }
+
     compileOptions {
         isCoreLibraryDesugaringEnabled = true
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
-    kotlinOptions {
-        jvmTarget = "11"
-    }
+
     buildFeatures {
         compose = true
         buildConfig = true
+    }
+}
+
+extensions.configure<KotlinAndroidProjectExtension>("kotlin") {
+    compilerOptions {
+        jvmTarget.set(JvmTarget.JVM_11)
     }
 }
 
@@ -99,6 +121,10 @@ dependencies {
     implementation(libs.accompanist.permissions)
     implementation(libs.material.motion)
     implementation(libs.haze)
+    implementation(libs.kyant.shapes)
+    implementation(libs.osmdroid.android)
+    implementation(libs.androidx.navigation3.runtime)
+    implementation(libs.androidx.navigation3.ui)
     implementation(libs.haze.materials)
 
     implementation(platform(libs.koin.bom))
@@ -122,6 +148,6 @@ dependencies {
     testImplementation(libs.kotlinx.coroutines.test)
 }
 
-ksp {
+extensions.configure<KspExtension>("ksp") {
     arg("room.schemaLocation", "$projectDir/schemas")
 }

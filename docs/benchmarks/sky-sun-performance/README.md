@@ -1,0 +1,1 @@
+Performance work was explicitly stopped at the user's request while the optical appearance is still being revised. This directory contains interrupted/superseded iterations and must not be used to report performance of the final optics. Resume measurements only after visual work is settled.

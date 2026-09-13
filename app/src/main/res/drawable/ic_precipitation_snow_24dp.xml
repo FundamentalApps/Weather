@@ -1,0 +1,16 @@
+<!-- Cloud and snowflakes, merged into one vector: the weather glyphs are authored as separate
+     layers for the multi-layer icons, so a single layer on its own sits off-centre. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+  <path
+      android:pathData="M7.5,16c-1.52,0 -2.81,-0.54 -3.89,-1.61s-1.61,-2.37 -1.61,-3.89c0,-1.38 0.46,-2.59 1.38,-3.63 0.92,-1.03 2.05,-1.64 3.4,-1.83 0.53,-0.95 1.26,-1.7 2.19,-2.24s1.94,-0.81 3.04,-0.81c1.5,0 2.8,0.48 3.91,1.44s1.78,2.15 2.01,3.59c1.15,0.1 2.12,0.58 2.9,1.43s1.18,1.87 1.18,3.05c0,1.25 -0.44,2.31 -1.31,3.19s-1.94,1.31 -3.19,1.31H7.5Z"
+      android:strokeWidth="0"
+      android:fillColor="#1f1f1f"/>
+  <path
+      android:fillColor="#FF000000"
+      android:pathData="M13.67,17.35l-1,1.01l-0.37,-1.38l-0.64,0.17l0.36,1.38l-1.37,-0.37l-0.17,0.64l1.37,0.37l-1,1.01l0.47,0.47l1,-1.01l0.37,1.38l0.65,-0.17l-0.37,-1.38l1.37,0.37l0.17,-0.64l-1.37,-0.37l1.01,-1.01l-0.48,-0.47z"
+      android:strokeWidth="0"/>
+</vector>

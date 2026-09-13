@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Caelum Palette Lab</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <main class="app-shell">
+    <aside class="sidebar">
+      <header class="intro">
+        <p class="eyebrow">Caelum Palette Lab</p>
+        <h1>天气色板实验台</h1>
+        <p class="lead">先找对气质，再收拢成规则。四色一起进入动态色场，预览使用 WebGL shader。</p>
+      </header>
+
+      <section class="section">
+        <label class="field">
+          <span class="field-label">天气原型</span>
+          <select id="preset">
+            <option value="clearMorning">晴天早晨</option>
+            <option value="clearNoon">晴天正午</option>
+            <option value="cloudyDay">多云</option>
+            <option value="clearNight">晴夜</option>
+            <option value="goldenHour">薄云黄昏</option>
+            <option value="overcast">阴天</option>
+            <option value="rain">雨天</option>
+            <option value="mist">雾</option>
+            <option value="snow">雪天</option>
+            <option value="snowNight">夜雪</option>
+            <option value="freezingRain">冻雨</option>
+            <option value="dust">浮尘</option>
+            <option value="sandstorm">沙尘暴</option>
+            <option value="storm">雷雨</option>
+            <option value="stormDusk">雷雨黄昏</option>
+            <option value="nightRain">夜雨</option>
+          </select>
+        </label>
+      </section>
+
+      <section class="section">
+        <h2>天气维度</h2>
+        <label class="range-field">
+          <span class="range-row"><span>太阳高度</span><output for="sunAltitude"></output></span>
+          <input id="sunAltitude" type="range" min="-12" max="80" step="1" value="12">
+        </label>
+        <label class="range-field">
+          <span class="range-row"><span>日程</span><output for="sunProgress"></output></span>
+          <input id="sunProgress" type="range" min="0" max="100" step="1" value="18">
+        </label>
+        <label class="range-field">
+          <span class="range-row"><span>云量</span><output for="cloudCover"></output></span>
+          <input id="cloudCover" type="range" min="0" max="100" step="1" value="10">
+        </label>
+        <label class="range-field">
+          <span class="range-row"><span>降水</span><output for="rainAmount"></output></span>
+          <input id="rainAmount" type="range" min="0" max="100" step="1" value="0">
+        </label>
+        <label class="range-field">
+          <span class="range-row"><span>雾 / 霾</span><output for="hazeAmount"></output></span>
+          <input id="hazeAmount" type="range" min="0" max="100" step="1" value="0">
+        </label>
+        <label class="range-field">
+          <span class="range-row"><span>沙尘</span><output for="dustAmount"></output></span>
+          <input id="dustAmount" type="range" min="0" max="100" step="1" value="0">
+        </label>
+        <label class="range-field">
+          <span class="range-row"><span>气温</span><output for="temperature"></output></span>
+          <input id="temperature" type="range" min="-18" max="40" step="1" value="18">
+        </label>
+      </section>
+
+      <section class="section">
+        <h2>生成偏好</h2>
+        <label class="range-field">
+          <span class="range-row"><span>色彩力度</span><output for="saturation"></output></span>
+          <input id="saturation" type="range" min="60" max="150" step="1" value="108">
+        </label>
+        <label class="range-field">
+          <span class="range-row"><span>明度</span><output for="brightness"></output></span>
+          <input id="brightness" type="range" min="-16" max="16" step="1" value="0">
+        </label>
+        <label class="range-field">
+          <span class="range-row"><span>氛围同族性</span><output for="cohesion"></output></span>
+          <input id="cohesion" type="range" min="40" max="100" step="1" value="84">
+        </label>
+        <label class="range-field">
+          <span class="range-row"><span>层次对比</span><output for="accentAmount"></output></span>
+          <input id="accentAmount" type="range" min="10" max="120" step="1" value="42">
+        </label>
+        <label class="range-field">
+          <span class="range-row"><span>冷暖偏移</span><output for="accentFocus"></output></span>
+          <input id="accentFocus" type="range" min="-18" max="18" step="1" value="0">
+        </label>
+        <label class="range-field">
+          <span class="range-row"><span>流动速度</span><output for="motion"></output></span>
+          <input id="motion" type="range" min="20" max="180" step="1" value="68">
+        </label>
+      </section>
+
+      <section class="section">
+        <div class="section-row">
+          <h2>四色</h2>
+          <label class="inline-check">
+            <input id="lockManual" type="checkbox">
+            <span>锁定手动色值</span>
+          </label>
+        </div>
+        <div id="swatches" class="swatches"></div>
+        <div class="button-row">
+          <button id="regenerate" type="button">按天气重生成</button>
+          <button id="copyJson" type="button" class="button-secondary">复制 JSON</button>
+        </div>
+      </section>
+    </aside>
+
+    <section class="stage">
+      <div class="preview-area">
+        <canvas id="glCanvas" aria-label="palette preview"></canvas>
+        <div class="overlay">
+          <div class="status-row">
+            <span id="mockScene">晴天早晨</span>
+            <span id="mockCondition">晴，晨光</span>
+          </div>
+
+          <div class="hero-copy">
+            <strong id="mockTemp">18°</strong>
+            <span id="mockSummary">三色氛围 + 一色点亮</span>
+          </div>
+
+          <div class="glass-strip">
+            <div class="glass-block">
+              <small>云量</small>
+              <b id="mockCloud">10%</b>
+            </div>
+            <div class="glass-block">
+              <small>降水</small>
+              <b id="mockRain">0%</b>
+            </div>
+            <div class="glass-block">
+              <small>雾 / 霾</small>
+              <b id="mockHaze">0%</b>
+            </div>
+            <div class="glass-block">
+              <small>沙尘</small>
+              <b id="mockDust">0%</b>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="readout-panel">
+        <div class="panel-copy">
+          <h2>输出</h2>
+          <p>预览 shader 与 Android 侧 FluidGradientBackground 对齐。先把四色关系调顺，再考虑落到代码。</p>
+        </div>
+        <pre id="paletteJson"></pre>
+      </div>
+    </section>
+  </main>
+
+  <script src="./app.js?v=palette-solar-card-mode-1"></script>
+</body>
+</html>

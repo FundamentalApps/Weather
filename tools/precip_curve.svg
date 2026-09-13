@@ -1,0 +1,145 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 360" width="560" height="360"
+     font-family="system-ui, -apple-system, 'Helvetica Neue', sans-serif">
+
+  <rect width="560" height="360" fill="#FAFAFA" rx="10"/>
+
+  <!--
+    PCHIP knots: (0,0) (0.21,0.25) (0.67,0.50) (1.33,0.75) (2.67,1.00) (10.0,1.00)
+    Phantom knot at x=10 forces delta[4]=0 → m[4]=0 (horizontal tangent at ceiling).
+    Tangents (Fritsch-Carlson): m = [1.190, 0.782, 0.451, 0.260, 0.000, 0.000]
+    Interval [1.33,2.67] now curves with m0=0.260, m1=0 → approaches top with zero slope.
+
+    Plot: x [60,480], y [20,290]  →  x_svg = 60+(x/3)*420,  y_svg = 290-w*270
+    Gridlines at w=0.25 (222.5), w=0.50 (155), w=0.75 (87.5)
+    Threshold x_svg: 0.21→89.4  0.67→153.8  1.33→246.2  2.67→433.8
+  -->
+
+  <!-- Zone fills -->
+  <rect x="60" y="222.5" width="420" height="67.5" fill="#E3F2FD" opacity="0.55"/>
+  <rect x="60" y="155"   width="420" height="67.5" fill="#FFF9C4" opacity="0.55"/>
+  <rect x="60" y="87.5"  width="420" height="67.5" fill="#FFE0B2" opacity="0.55"/>
+  <rect x="60" y="20"    width="420" height="67.5" fill="#FCEAE8" opacity="0.55"/>
+  <rect x="60" y="20" width="420" height="270" fill="none" stroke="#CFD8DC" stroke-width="1"/>
+
+  <!-- 3 gridlines -->
+  <line x1="60" y1="222.5" x2="480" y2="222.5" stroke="#90CAF9" stroke-width="1.5"/>
+  <line x1="60" y1="155"   x2="480" y2="155"   stroke="#90CAF9" stroke-width="1.5"/>
+  <line x1="60" y1="87.5"  x2="480" y2="87.5"  stroke="#90CAF9" stroke-width="1.5"/>
+
+  <!-- Threshold verticals -->
+  <line x1="89.4"  y1="20" x2="89.4"  y2="290" stroke="#90A4AE" stroke-width="1" stroke-dasharray="4 3"/>
+  <line x1="153.8" y1="20" x2="153.8" y2="290" stroke="#90A4AE" stroke-width="1" stroke-dasharray="4 3"/>
+  <line x1="246.2" y1="20" x2="246.2" y2="290" stroke="#90A4AE" stroke-width="1" stroke-dasharray="4 3"/>
+  <line x1="433.8" y1="20" x2="433.8" y2="290" stroke="#90A4AE" stroke-width="1" stroke-dasharray="4 3"/>
+
+  <!-- Zone labels -->
+  <text x="488" y="262" font-size="11" fill="#1976D2">小雨</text>
+  <text x="488" y="194" font-size="11" fill="#F57F17">中雨</text>
+  <text x="488" y="126" font-size="11" fill="#E65100">大雨</text>
+  <text x="488" y="58"  font-size="11" fill="#C62828">暴雨</text>
+
+  <!-- Linear reference -->
+  <line x1="60" y1="290" x2="433.8" y2="20"
+        stroke="#BDBDBD" stroke-width="1.5" stroke-dasharray="8 5"/>
+
+  <!--
+    Recomputed interval [1.33, 2.67] with m0=0.260, m1=0, h=1.34:
+    p(t) = 0.75*(2t³-3t²+1) + 1.0*(-2t³+3t²) + 0.260*1.34*t*(t-1)² + 0
+         = 0.75*(2t³-3t²+1) + (-2t³+3t²) + 0.3484*t*(t-1)²
+
+    t=0.0: 0.750   x=1.330
+    t=0.1: 0.75*0.971+0.028+0.3484*0.081 = 0.72825+0.028+0.02822 = 0.78447   x=1.464
+    t=0.2: 0.75*0.904+0.096+0.3484*0.128 = 0.678+0.096+0.04460 = 0.81860     x=1.598
+    t=0.3: 0.75*0.784+0.216+0.3484*0.147 = 0.588+0.216+0.05121 = 0.85521     x=1.732
+    t=0.4: 0.75*0.648+0.352+0.3484*0.144 = 0.486+0.352+0.05017 = 0.88817     x=1.866
+    t=0.5: 0.75*0.500+0.500+0.3484*0.125 = 0.375+0.500+0.04355 = 0.91855     x=2.000
+    t=0.6: 0.75*0.352+0.648+0.3484*0.096 = 0.264+0.648+0.03345 = 0.94545     x=2.134
+    t=0.7: 0.75*0.216+0.784+0.3484*0.063 = 0.162+0.784+0.02195 = 0.96795     x=2.268
+    t=0.8: 0.75*0.096+0.904+0.3484*0.032 = 0.072+0.904+0.01115 = 0.98715     x=2.402
+    t=0.9: 0.75*0.028+0.972+0.3484*0.009 = 0.021+0.972+0.00314 = 0.99614     x=2.536
+    t=1.0: 1.000   x=2.670
+
+    All other intervals unchanged (m values unaffected by phantom point).
+  -->
+  <polyline
+    points="
+      60.0,290.0
+      62.9,283.0  65.9,276.2  68.8,268.4  71.8,260.8
+      74.7,253.3  77.6,246.3  80.6,239.2  83.5,233.0
+      86.5,227.4  89.4,222.5
+      95.8,213.3  102.3,205.5  108.7,197.1  115.2,190.1
+      121.6,183.6  128.0,177.4  134.5,171.7  141.0,165.5
+      147.4,160.7  153.8,155.0
+      163.0,147.2  172.3,139.6  181.5,131.5  190.8,124.2
+      200.0,116.9  209.2,110.2  218.5,103.7  227.7,97.2
+      237.0,92.4   246.2,87.5
+      265.0,78.2   283.7,69.0   302.5,59.1   321.2,50.2
+      340.0,42.0   358.8,34.7   377.5,28.7   396.3,23.9
+      415.0,21.0   433.8,20.0"
+    fill="none" stroke="#1E88E5" stroke-width="2.5"
+    stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Flat extension (slope=0 past 2.67) -->
+  <line x1="433.8" y1="20" x2="480" y2="20"
+        stroke="#1E88E5" stroke-width="2.5" stroke-dasharray="5 4"/>
+
+  <!-- Knot points (excluding phantom) -->
+  <circle cx="60.0"  cy="290.0" r="5" fill="#1565C0" stroke="white" stroke-width="1.5"/>
+  <circle cx="89.4"  cy="222.5" r="5" fill="#1565C0" stroke="white" stroke-width="1.5"/>
+  <circle cx="153.8" cy="155.0" r="5" fill="#1565C0" stroke="white" stroke-width="1.5"/>
+  <circle cx="246.2" cy="87.5"  r="5" fill="#1565C0" stroke="white" stroke-width="1.5"/>
+  <circle cx="433.8" cy="20.0"  r="5" fill="#1565C0" stroke="white" stroke-width="1.5"/>
+
+  <!-- Tangent arrow at ceiling showing slope=0 -->
+  <line x1="420" y1="20" x2="448" y2="20" stroke="#E53935" stroke-width="1.5" marker-end="url(#arr)"/>
+  <defs>
+    <marker id="arr" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto">
+      <path d="M0,0 L6,3 L0,6 Z" fill="#E53935"/>
+    </marker>
+  </defs>
+  <text x="436" y="16" font-size="10" fill="#E53935">slope→0</text>
+
+  <!-- Axes -->
+  <line x1="60" y1="290" x2="490" y2="290" stroke="#37474F" stroke-width="1.5"/>
+  <line x1="60" y1="20"  x2="60"  y2="296" stroke="#37474F" stroke-width="1.5"/>
+
+  <!-- X ticks + labels -->
+  <line x1="89.4"  y1="290" x2="89.4"  y2="297" stroke="#37474F" stroke-width="1.5"/>
+  <line x1="153.8" y1="290" x2="153.8" y2="297" stroke="#37474F" stroke-width="1.5"/>
+  <line x1="246.2" y1="290" x2="246.2" y2="297" stroke="#37474F" stroke-width="1.5"/>
+  <line x1="433.8" y1="290" x2="433.8" y2="297" stroke="#37474F" stroke-width="1.5"/>
+
+  <text x="89.4"  y="312" text-anchor="middle" font-size="11" fill="#546E7A">0.21</text>
+  <text x="153.8" y="312" text-anchor="middle" font-size="11" fill="#546E7A">0.67</text>
+  <text x="246.2" y="312" text-anchor="middle" font-size="11" fill="#546E7A">1.33</text>
+  <text x="433.8" y="312" text-anchor="middle" font-size="11" fill="#546E7A">2.67</text>
+  <text x="270"   y="336" text-anchor="middle" font-size="13" fill="#37474F">降水强度 (mm / 5min)</text>
+
+  <!-- Y ticks + labels -->
+  <line x1="54" y1="222.5" x2="60" y2="222.5" stroke="#37474F" stroke-width="1.5"/>
+  <line x1="54" y1="155"   x2="60" y2="155"   stroke="#37474F" stroke-width="1.5"/>
+  <line x1="54" y1="87.5"  x2="60" y2="87.5"  stroke="#37474F" stroke-width="1.5"/>
+  <line x1="54" y1="290"   x2="60" y2="290"   stroke="#37474F" stroke-width="1.5"/>
+  <line x1="54" y1="20"    x2="60" y2="20"    stroke="#37474F" stroke-width="1.5"/>
+
+  <text x="49" y="294"   text-anchor="end" font-size="12" fill="#546E7A">0</text>
+  <text x="49" y="226.5" text-anchor="end" font-size="12" fill="#546E7A">¼</text>
+  <text x="49" y="159"   text-anchor="end" font-size="12" fill="#546E7A">½</text>
+  <text x="49" y="91.5"  text-anchor="end" font-size="12" fill="#546E7A">¾</text>
+  <text x="49" y="24"    text-anchor="end" font-size="12" fill="#546E7A">1</text>
+
+  <text x="16" y="160" text-anchor="middle" font-size="12" fill="#37474F"
+        transform="rotate(-90,16,160)">视觉高度 weight</text>
+
+  <!-- Legend -->
+  <rect x="65" y="42" width="190" height="68" fill="white" rx="5"
+        stroke="#CFD8DC" stroke-width="1" opacity="0.92"/>
+  <line x1="74" y1="60" x2="104" y2="60" stroke="#1E88E5" stroke-width="2.5" stroke-linecap="round"/>
+  <text x="110" y="64" font-size="12" fill="#212121">PCHIP（斜率→0 收敛）</text>
+  <line x1="74" y1="79" x2="104" y2="79" stroke="#BDBDBD" stroke-width="1.5" stroke-dasharray="8 4"/>
+  <text x="110" y="83" font-size="12" fill="#757575">线性参考</text>
+  <text x="74"  y="100" font-size="11" fill="#546E7A">幻影点 (10, 1) 强制末端切线=0</text>
+
+  <text x="270" y="13" text-anchor="middle" font-size="14"
+        fill="#212121" font-weight="600">降水强度 → 视觉高度（末端斜率趋零）</text>
+</svg>

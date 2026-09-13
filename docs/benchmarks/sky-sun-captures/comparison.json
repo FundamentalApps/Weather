@@ -1,0 +1,140 @@
+{
+  "method": "Modal references cropped at y=182px; both resampled to 320x700. RGB MAE only on lower side gutters x=7:13/307:313 y=315:610. This is palette error, NOT overall similarity. Cloud shapes assessed visually; reference animation phase unavailable.",
+  "scenes": [
+    {
+      "scene": "clear",
+      "backgroundGutterMeanAbsoluteRgbError": 6.83,
+      "samples": [
+        {
+          "y": 0.45,
+          "referenceRgb": [
+            62.5,
+            124.5,
+            185.0
+          ],
+          "deviceRgb": [
+            74.0,
+            129.0,
+            180.0
+          ]
+        },
+        {
+          "y": 0.6,
+          "referenceRgb": [
+            72.0,
+            134.0,
+            195.0
+          ],
+          "deviceRgb": [
+            83.0,
+            138.0,
+            189.0
+          ]
+        },
+        {
+          "y": 0.8,
+          "referenceRgb": [
+            91.0,
+            151.0,
+            213.0
+          ],
+          "deviceRgb": [
+            98.0,
+            152.0,
+            201.0
+          ]
+        }
+      ]
+    },
+    {
+      "scene": "mostly_clear",
+      "backgroundGutterMeanAbsoluteRgbError": 5.1,
+      "samples": [
+        {
+          "y": 0.45,
+          "referenceRgb": [
+            65.0,
+            125.0,
+            184.0
+          ],
+          "deviceRgb": [
+            74.0,
+            129.0,
+            180.0
+          ]
+        },
+        {
+          "y": 0.6,
+          "referenceRgb": [
+            77.0,
+            137.0,
+            196.0
+          ],
+          "deviceRgb": [
+            83.0,
+            138.0,
+            189.0
+          ]
+        },
+        {
+          "y": 0.8,
+          "referenceRgb": [
+            97.0,
+            154.0,
+            213.0
+          ],
+          "deviceRgb": [
+            98.0,
+            152.0,
+            201.0
+          ]
+        }
+      ]
+    },
+    {
+      "scene": "partly_cloudy",
+      "backgroundGutterMeanAbsoluteRgbError": 4.71,
+      "samples": [
+        {
+          "y": 0.45,
+          "referenceRgb": [
+            69.5,
+            126.5,
+            184.0
+          ],
+          "deviceRgb": [
+            74.0,
+            129.0,
+            180.0
+          ]
+        },
+        {
+          "y": 0.6,
+          "referenceRgb": [
+            78.0,
+            137.0,
+            195.0
+          ],
+          "deviceRgb": [
+            83.0,
+            138.0,
+            189.0
+          ]
+        },
+        {
+          "y": 0.8,
+          "referenceRgb": [
+            100.0,
+            155.0,
+            212.0
+          ],
+          "deviceRgb": [
+            98.0,
+            152.0,
+            201.0
+          ]
+        }
+      ]
+    }
+  ]
+}

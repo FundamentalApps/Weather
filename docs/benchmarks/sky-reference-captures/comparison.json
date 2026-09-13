@@ -1,0 +1,320 @@
+{
+  "method": "Modal references cropped at y=182px; both resampled to 320x700. RGB MAE only on lower side gutters x=7:13/307:313 y=315:610. This is palette error, NOT overall similarity. Cloud shapes assessed visually; reference animation phase unavailable.",
+  "scenes": [
+    {
+      "scene": "clear",
+      "backgroundGutterMeanAbsoluteRgbError": 2.45,
+      "samples": [
+        {
+          "y": 0.45,
+          "referenceRgb": [
+            62.5,
+            124.5,
+            185.0
+          ],
+          "deviceRgb": [
+            60.0,
+            123.0,
+            185.0
+          ]
+        },
+        {
+          "y": 0.6,
+          "referenceRgb": [
+            72.0,
+            134.0,
+            195.0
+          ],
+          "deviceRgb": [
+            70.0,
+            133.0,
+            196.0
+          ]
+        },
+        {
+          "y": 0.8,
+          "referenceRgb": [
+            91.0,
+            151.0,
+            213.0
+          ],
+          "deviceRgb": [
+            85.0,
+            148.0,
+            211.0
+          ]
+        }
+      ]
+    },
+    {
+      "scene": "mostly_clear",
+      "backgroundGutterMeanAbsoluteRgbError": 4.66,
+      "samples": [
+        {
+          "y": 0.45,
+          "referenceRgb": [
+            65.0,
+            125.0,
+            184.0
+          ],
+          "deviceRgb": [
+            60.0,
+            123.0,
+            185.0
+          ]
+        },
+        {
+          "y": 0.6,
+          "referenceRgb": [
+            77.0,
+            137.0,
+            196.0
+          ],
+          "deviceRgb": [
+            70.0,
+            133.0,
+            196.0
+          ]
+        },
+        {
+          "y": 0.8,
+          "referenceRgb": [
+            97.0,
+            154.0,
+            213.0
+          ],
+          "deviceRgb": [
+            85.0,
+            148.0,
+            211.0
+          ]
+        }
+      ]
+    },
+    {
+      "scene": "partly_cloudy",
+      "backgroundGutterMeanAbsoluteRgbError": 5.61,
+      "samples": [
+        {
+          "y": 0.45,
+          "referenceRgb": [
+            69.5,
+            126.5,
+            184.0
+          ],
+          "deviceRgb": [
+            60.0,
+            123.0,
+            185.0
+          ]
+        },
+        {
+          "y": 0.6,
+          "referenceRgb": [
+            78.0,
+            137.0,
+            195.0
+          ],
+          "deviceRgb": [
+            70.0,
+            133.0,
+            196.0
+          ]
+        },
+        {
+          "y": 0.8,
+          "referenceRgb": [
+            100.0,
+            155.0,
+            212.0
+          ],
+          "deviceRgb": [
+            85.0,
+            148.0,
+            211.0
+          ]
+        }
+      ]
+    },
+    {
+      "scene": "cloudy",
+      "backgroundGutterMeanAbsoluteRgbError": 3.43,
+      "samples": [
+        {
+          "y": 0.45,
+          "referenceRgb": [
+            164.0,
+            180.5,
+            197.0
+          ],
+          "deviceRgb": [
+            164.0,
+            181.0,
+            198.0
+          ]
+        },
+        {
+          "y": 0.6,
+          "referenceRgb": [
+            157.0,
+            173.0,
+            189.0
+          ],
+          "deviceRgb": [
+            159.0,
+            176.0,
+            193.0
+          ]
+        },
+        {
+          "y": 0.8,
+          "referenceRgb": [
+            148.0,
+            164.0,
+            180.0
+          ],
+          "deviceRgb": [
+            151.0,
+            169.0,
+            187.0
+          ]
+        }
+      ]
+    },
+    {
+      "scene": "night",
+      "backgroundGutterMeanAbsoluteRgbError": 2.34,
+      "samples": [
+        {
+          "y": 0.45,
+          "referenceRgb": [
+            35.5,
+            38.0,
+            64.5
+          ],
+          "deviceRgb": [
+            32.0,
+            34.0,
+            60.0
+          ]
+        },
+        {
+          "y": 0.6,
+          "referenceRgb": [
+            39.0,
+            46.0,
+            72.0
+          ],
+          "deviceRgb": [
+            37.0,
+            43.0,
+            70.0
+          ]
+        },
+        {
+          "y": 0.8,
+          "referenceRgb": [
+            42.0,
+            56.0,
+            83.0
+          ],
+          "deviceRgb": [
+            43.0,
+            57.0,
+            83.0
+          ]
+        }
+      ]
+    },
+    {
+      "scene": "night_cloudy",
+      "backgroundGutterMeanAbsoluteRgbError": 1.61,
+      "samples": [
+        {
+          "y": 0.45,
+          "referenceRgb": [
+            30.0,
+            34.0,
+            61.0
+          ],
+          "deviceRgb": [
+            32.0,
+            34.0,
+            60.0
+          ]
+        },
+        {
+          "y": 0.6,
+          "referenceRgb": [
+            37.0,
+            42.0,
+            71.0
+          ],
+          "deviceRgb": [
+            37.0,
+            43.0,
+            70.0
+          ]
+        },
+        {
+          "y": 0.8,
+          "referenceRgb": [
+            41.0,
+            53.0,
+            83.0
+          ],
+          "deviceRgb": [
+            43.0,
+            57.0,
+            83.0
+          ]
+        }
+      ]
+    },
+    {
+      "scene": "storm",
+      "backgroundGutterMeanAbsoluteRgbError": 5.12,
+      "samples": [
+        {
+          "y": 0.45,
+          "referenceRgb": [
+            60.0,
+            78.0,
+            92.0
+          ],
+          "deviceRgb": [
+            57.0,
+            80.0,
+            97.0
+          ]
+        },
+        {
+          "y": 0.6,
+          "referenceRgb": [
+            51.0,
+            69.0,
+            83.0
+          ],
+          "deviceRgb": [
+            53.0,
+            75.0,
+            92.0
+          ]
+        },
+        {
+          "y": 0.8,
+          "referenceRgb": [
+            47.0,
+            65.0,
+            79.0
+          ],
+          "deviceRgb": [
+            50.0,
+            71.0,
+            87.0
+          ]
+        }
+      ]
+    }
+  ]
+}

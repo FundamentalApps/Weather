@@ -1,0 +1,31 @@
+{
+  "runId": "legacy-storm-frozen-2",
+  "renderer": "legacy",
+  "scene": "storm",
+  "workload": "frozen",
+  "device": "Pixel 9 Pro",
+  "sdk": 37,
+  "debuggable": false,
+  "width": 960,
+  "height": 2142,
+  "warmupMs": 1500,
+  "measurementMs": 5003,
+  "frames": 0,
+  "renderedFps": 0,
+  "callbackDrops": 0,
+  "missedDeadlines": 0,
+  "deadlineFrames": 0,
+  "processCpuMs": 19,
+  "pssKb": 55938,
+  "thermalStart": 0,
+  "thermalEnd": 0,
+  "powerSave": false,
+  "rawColumns": [
+    "totalMs",
+    "gpuMs",
+    "deadlineMs",
+    "drawMs",
+    "intendedVsyncNs"
+  ],
+  "rawFrames": []
+}

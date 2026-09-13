@@ -1,0 +1,1 @@
+This initial capture attempt failed because the sleeping device window had no PixelCopy surface. No performance results from this directory are valid. Successful captures are in ../sky-reference-captures and repeated timings in ../sky-performance and ../sky-workloads.

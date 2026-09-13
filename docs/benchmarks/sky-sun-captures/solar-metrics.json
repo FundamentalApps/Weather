@@ -1,0 +1,17 @@
+{
+  "method": "Crop modal top 182 pixels; normalize to 480x1000; solar patch x=.16:.50,y=.015:.14 avoids UI. RGB MAE is not overall realism; core threshold requires all channels >220.",
+  "metrics": {
+    "reference": {
+      "solarPatchRgbMae": 0.0,
+      "brightCoreFraction": 0.3284878048780488
+    },
+    "previous": {
+      "solarPatchRgbMae": 24.476455284552845,
+      "brightCoreFraction": 0.048682926829268294
+    },
+    "current": {
+      "solarPatchRgbMae": 9.424829268292683,
+      "brightCoreFraction": 0.3472682926829268
+    }
+  }
+}

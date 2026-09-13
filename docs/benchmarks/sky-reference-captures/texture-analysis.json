@@ -1,0 +1,10 @@
+{
+  "previous": {
+    "highFrequencyRms": 7.830999619733933,
+    "adjacentPixelMeanDifference": 5.1219025635538165
+  },
+  "current": {
+    "highFrequencyRms": 1.0071817689221056,
+    "adjacentPixelMeanDifference": 1.151476935149375
+  }
+}

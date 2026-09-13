@@ -1,0 +1,3 @@
+c343c3f4b2205e6702a600e0ad273baaf88790f87eaa30b56b50d33e9b148579  app/build/outputs/apk/benchmark/app-benchmark.apk
+763b0a17c7c0ddad61756ac661ce9bc40d23d51a71b6bfa8dbbaadd1f96c8f33  app/src/main/res/drawable-nodpi/sky_cloud_density.png
+e4027c08697d20fc4b6b33c6d4e7eb0551e328c639177865e4f8e8cfaef75a2e  app/src/main/java/org/fundamentalos/weather/ui/sky/SkyShader.kt

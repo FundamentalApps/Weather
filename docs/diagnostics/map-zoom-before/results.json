@@ -1,0 +1,92 @@
+[
+  {
+    "step": 0,
+    "frame": 0,
+    "darkGapFraction": 4.3572984749455335e-06
+  },
+  {
+    "step": 0,
+    "frame": 1,
+    "darkGapFraction": 0.0007058823529411765
+  },
+  {
+    "step": 0,
+    "frame": 2,
+    "darkGapFraction": 0.00037472766884531593
+  },
+  {
+    "step": 1,
+    "frame": 0,
+    "darkGapFraction": 0.0001655773420479303
+  },
+  {
+    "step": 1,
+    "frame": 1,
+    "darkGapFraction": 0.0
+  },
+  {
+    "step": 1,
+    "frame": 2,
+    "darkGapFraction": 0.0
+  },
+  {
+    "step": 2,
+    "frame": 0,
+    "darkGapFraction": 0.0
+  },
+  {
+    "step": 2,
+    "frame": 1,
+    "darkGapFraction": 3.485838779956427e-05
+  },
+  {
+    "step": 2,
+    "frame": 2,
+    "darkGapFraction": 3.485838779956427e-05
+  },
+  {
+    "step": 3,
+    "frame": 0,
+    "darkGapFraction": 0.0
+  },
+  {
+    "step": 3,
+    "frame": 1,
+    "darkGapFraction": 0.0
+  },
+  {
+    "step": 3,
+    "frame": 2,
+    "darkGapFraction": 0.0
+  },
+  {
+    "step": 4,
+    "frame": 0,
+    "darkGapFraction": 0.0
+  },
+  {
+    "step": 4,
+    "frame": 1,
+    "darkGapFraction": 4.3572984749455335e-05
+  },
+  {
+    "step": 4,
+    "frame": 2,
+    "darkGapFraction": 4.3572984749455335e-05
+  },
+  {
+    "step": 5,
+    "frame": 0,
+    "darkGapFraction": 0.0
+  },
+  {
+    "step": 5,
+    "frame": 1,
+    "darkGapFraction": 0.0
+  },
+  {
+    "step": 5,
+    "frame": 2,
+    "darkGapFraction": 0.0
+  }
+]
