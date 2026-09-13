@@ -74,6 +74,7 @@ class WeatherFieldStore(context: Context) {
         override fun sizeOf(key: FieldChunkKey, value: Bitmap): Int = value.allocationByteCount
     }
     private val inFlight = HashMap<FieldChunkKey, Job>()
+    private var foregroundInFlight = 0
     private val failedAt = HashMap<FieldChunkKey, Long>()
     private val swept = HashSet<String>()
     private val latestStamp = HashMap<String, String>()
@@ -102,13 +103,17 @@ class WeatherFieldStore(context: Context) {
 
     /**
      * Starts bringing the chunk into memory unless it is there, on its way, or failed a moment
-     * ago. Every listener hears when it lands.
+     * ago. Every listener hears when it lands. A [background] request is one nobody is looking
+     * at yet; it waits its turn until nothing in the foreground is loading, and is simply
+     * dropped meanwhile, to be asked for again by a later draw.
      */
-    fun request(key: FieldChunkKey, source: FieldLayerSource) {
+    fun request(key: FieldChunkKey, source: FieldLayerSource, background: Boolean = false) {
         synchronized(inFlight) {
             if (memory.get(key) != null || inFlight.containsKey(key)) return
+            if (background && foregroundInFlight > 0) return
             val failed = failedAt[key]
             if (failed != null && SystemClock.elapsedRealtime() - failed < RetryAfterMillis) return
+            if (!background) foregroundInFlight++
             inFlight[key] = scope.launch {
                 val bitmap = try {
                     gate.withPermit { load(key, source) }
@@ -120,6 +125,7 @@ class WeatherFieldStore(context: Context) {
                 }
                 synchronized(inFlight) {
                     inFlight.remove(key)
+                    if (!background) foregroundInFlight--
                     if (bitmap != null) {
                         memory.put(key, bitmap)
                         failedAt.remove(key)

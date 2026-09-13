@@ -63,10 +63,12 @@ class WeatherFieldOverlay(
 
         val now = SystemClock.uptimeMillis()
         var animating = false
+        var complete = true
         for (y in firstY..lastY) for (x in firstX..lastX) {
             val key = FieldChunkKey(source.stamp, level, x, y)
             val bitmap = store.peek(key)
             if (bitmap == null) {
+                complete = false
                 store.request(key, source)
                 drawStandIn(canvas, projection, key)
                 continue
@@ -82,12 +84,24 @@ class WeatherFieldOverlay(
         }
         drawnOnce = true
         if (animating) map.postInvalidateOnAnimation()
+        // With the view served, warm the way out: the coarser chunks over this spot, down to the
+        // one image of the world, so a zoom out always has something to draw at once. These go
+        // in the background, behind anything a pan or a zoom asks for meanwhile.
+        if (complete) {
+            for (y in firstY..lastY) for (x in firstX..lastX) {
+                for (coarser in level - 1 downTo 0) {
+                    val shift = level - coarser
+                    val ancestor = FieldChunkKey(source.stamp, coarser, x shr shift, y shr shift)
+                    if (store.peek(ancestor) == null) store.request(ancestor, source, background = true)
+                }
+            }
+        }
     }
 
     /**
      * Covers the square of [key] with whatever is already in memory: the previous edition of the
-     * same chunk, else the nearest ancestor from a coarser level, else the children from the
-     * finer one. Nothing is drawn if none of those is there yet.
+     * same chunk, else the nearest ancestor from a coarser level, else whatever descendants there
+     * are from the finer ones. Nothing is drawn if none of those is there yet.
      */
     private fun drawStandIn(canvas: Canvas, projection: Projection, key: FieldChunkKey) {
         store.peekPrevious(source.layer.id, key)?.let {
@@ -107,12 +121,20 @@ class WeatherFieldOverlay(
             canvas.restore()
             return
         }
-        if (key.level < MaxChunkLevel) {
-            for (dy in 0..1) for (dx in 0..1) {
-                val child = FieldChunkKey(key.stamp, key.level + 1, key.x * 2 + dx, key.y * 2 + dy)
-                val bitmap = store.peek(child) ?: store.peekPrevious(source.layer.id, child) ?: continue
-                drawChunk(canvas, projection, bitmap, child, 1f)
-            }
+        drawDescendants(canvas, projection, key)
+    }
+
+    /**
+     * Tiles the square of [key] with its children where they are in memory and, where one is
+     * not, with that child's own descendants. Each spot is drawn once, so nothing doubles up.
+     */
+    private fun drawDescendants(canvas: Canvas, projection: Projection, key: FieldChunkKey) {
+        if (key.level >= MaxChunkLevel) return
+        for (dy in 0..1) for (dx in 0..1) {
+            val child = FieldChunkKey(key.stamp, key.level + 1, key.x * 2 + dx, key.y * 2 + dy)
+            val bitmap = store.peek(child) ?: store.peekPrevious(source.layer.id, child)
+            if (bitmap != null) drawChunk(canvas, projection, bitmap, child, 1f)
+            else drawDescendants(canvas, projection, child)
         }
     }
 

@@ -10,6 +10,7 @@ import android.graphics.Color as AndroidColor
 import android.graphics.ColorMatrix
 import android.graphics.ColorMatrixColorFilter
 import android.graphics.Paint
+import android.os.Build
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
@@ -30,6 +31,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -53,13 +55,21 @@ import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.hazeSource
 import org.fundamentalos.weather.BuildConfig
+import org.fundamentalos.weather.settings.AppSettings
+import org.fundamentalos.weather.ui.componets.AppleWeatherConditionTextMaterial
+import org.fundamentalos.weather.ui.componets.AppleWeatherConditionTextMaterialLight
 import org.fundamentalos.weather.ui.componets.BlurOnlyHazeStyle
 import org.fundamentalos.weather.ui.componets.GlassTopAppBar
+import org.fundamentalos.weather.ui.componets.LocalGlassBackdrop
 import org.fundamentalos.weather.ui.componets.StatusBarAppearance
 import org.fundamentalos.weather.ui.componets.TemperatureField
 import org.fundamentalos.weather.ui.componets.ContinuityTileProvider
 import org.fundamentalos.weather.ui.componets.bottomEdgeBlur
+import org.fundamentalos.weather.ui.componets.conditionTextGlassMaterial
+import org.fundamentalos.weather.ui.componets.glassBackdropSource
+import org.fundamentalos.weather.ui.componets.rememberGlassBackdropState
 import org.fundamentalos.weather.ui.map.FieldLayerSource
+import org.fundamentalos.weather.ui.map.MapInkOverlay
 import org.fundamentalos.weather.ui.map.WeatherFieldOverlay
 import org.fundamentalos.weather.ui.map.WeatherFieldStore
 import org.fundamentalos.weather.ui.theme.PreviewThemeWithBg
@@ -137,6 +147,7 @@ fun MapScreen(
     vm: MainViewModel = koinViewModel(),
     api: FosApiClient = koinInject(),
     fieldStore: WeatherFieldStore = koinInject(),
+    settings: AppSettings = koinInject(),
 ) {
     val context = LocalContext.current
     val darkMap = isSystemInDarkTheme()
@@ -238,7 +249,7 @@ fun MapScreen(
 
     // The overlays wait for a centre: a field overlay asks for the chunks under the view the
     // first time it is drawn, and until the location is known that view is (0°, 0°).
-    DisposableEffect(mapView, visible, center == null) {
+    DisposableEffect(mapView, visible, center == null, darkMap) {
         val map = mapView ?: return@DisposableEffect onDispose { }
         if (center == null) return@DisposableEffect onDispose { }
         map.controller.setCenter(center)
@@ -248,6 +259,11 @@ fun MapScreen(
             } else {
                 layer.toOverlay(context, map)
             }
+        }.toMutableList()
+        // A field covers the base map's names and roads; draw its ink again on top of it.
+        if (overlays.any { it is WeatherFieldOverlay }) {
+            overlays += MapInkOverlay(map.tileProvider, context, MapInkOverlay.Ink.Halos, darkMap)
+            overlays += MapInkOverlay(map.tileProvider, context, MapInkOverlay.Ink.Marks, darkMap)
         }
         overlays.forEachIndexed { index, overlay -> map.overlays.add(index, overlay) }
         map.invalidate()
@@ -261,9 +277,27 @@ fun MapScreen(
 
     StatusBarAppearance(lightBackground = !darkMap)
 
+    // The bar title and the credits are glass text over the map, as the home screen's text is
+    // over the sky: the glyphs take the blurred map behind them, lifted in the dark theme and
+    // cut down into the bright day map. The shaders need API 33; below that they are plain text.
+    val glassBackdrop = if (settings.glassText && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        rememberGlassBackdropState(
+            conditionTextMaterial = if (darkMap) AppleWeatherConditionTextMaterial else AppleWeatherConditionTextMaterialLight,
+        )
+    } else {
+        null
+    }
+    val glassText = glassBackdrop != null
+
     Surface(modifier = modifier.fillMaxSize(), color = MaterialTheme.colorScheme.surface) {
+        CompositionLocalProvider(LocalGlassBackdrop provides glassBackdrop) {
         Box(Modifier.fillMaxSize()) {
-            Box(Modifier.fillMaxSize().background(if (darkMap) Color(0xFF7C7F8C) else Color(0xFFE0E5E8))) {
+            Box(
+                Modifier
+                    .fillMaxSize()
+                    .then(if (glassBackdrop != null) Modifier.glassBackdropSource(glassBackdrop) else Modifier)
+                    .background(if (darkMap) Color(0xFF7C7F8C) else Color(0xFFE0E5E8))
+            ) {
                 mapView?.let { map ->
                     AndroidView(factory = { map }, modifier = Modifier.fillMaxSize().hazeSource(hazeState))
                 }
@@ -295,6 +329,7 @@ fun MapScreen(
                     val at = layer.observedAt ?: return@mapNotNull null
                     "${mapLayerName(layer.id, layer.name)} ${localizedTime(Instant.fromEpochSeconds(at))}"
                 }
+                // With the material the glyphs are a mask, so they are drawn opaque.
                 Text(
                     text = when {
                         stamps.isNotEmpty() -> stamps.joinToString(" · ")
@@ -302,22 +337,31 @@ fun MapScreen(
                         visible.isEmpty() -> stringResource(R.string.layers_disabled)
                         else -> visible.map { mapLayerName(it.id, it.name) }.joinToString(" · ")
                     },
+                    modifier = Modifier.conditionTextGlassMaterial(),
                     style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = if (glassText) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Text(
                     text = (listOf(stringResource(R.string.map_attribution)) + visible.map { it.attribution })
                         .joinToString(" · "),
+                    modifier = Modifier.conditionTextGlassMaterial(),
                     style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                    color = (if (glassText) Color.White else MaterialTheme.colorScheme.onSurfaceVariant).copy(alpha = 0.7f),
                 )
             }
 
             GlassTopAppBar(
                 hazeState = hazeState,
-                title = { Text(stringResource(R.string.weather_map)) },
+                title = {
+                    Text(
+                        text = stringResource(R.string.weather_map),
+                        modifier = Modifier.conditionTextGlassMaterial(),
+                        color = if (glassText) Color.White else Color.Unspecified,
+                    )
+                },
                 onBack = onBackClick,
             )
+        }
         }
     }
 }
