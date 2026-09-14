@@ -5,6 +5,11 @@
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
 
+    <!-- Only apps signed with the same (platform) key may bind the weather provider. -->
+    <permission
+        android:name="org.fundamentalos.weather.permission.BIND_WEATHER_PROVIDER"
+        android:protectionLevel="signature" />
+
     <application
         android:enableOnBackInvokedCallback="true"
         android:allowBackup="true"
@@ -30,6 +35,16 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- Cross-process weather source for same-signature system apps (ASI Alt). -->
+        <service
+            android:name=".ipc.WeatherProviderService"
+            android:exported="true"
+            android:permission="org.fundamentalos.weather.permission.BIND_WEATHER_PROVIDER">
+            <intent-filter>
+                <action android:name="org.fundamentalos.weather.ipc.IWeatherProvider" />
+            </intent-filter>
+        </service>
     </application>
 
 </manifest>

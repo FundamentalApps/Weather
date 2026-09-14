@@ -7,6 +7,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.serialization)
+    alias(libs.plugins.kotlin.parcelize)
 }
 
 val localProperties = Properties().apply {
@@ -86,6 +87,7 @@ extensions.configure<ApplicationExtension>("android") {
     buildFeatures {
         compose = true
         buildConfig = true
+        aidl = true
     }
 }
 
@@ -138,6 +140,8 @@ dependencies {
     implementation(libs.ktor.serialization.kotlinx.json)
 
     implementation(libs.kotlinx.datetime)
+
+    implementation(libs.androidx.work.runtime.ktx)
 
     implementation(libs.kotlinx.coroutines.android)
     testImplementation(libs.kotlinx.coroutines.test)

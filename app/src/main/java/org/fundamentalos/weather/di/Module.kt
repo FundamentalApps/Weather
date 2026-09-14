@@ -1,6 +1,8 @@
 package org.fundamentalos.weather.di
 
 import org.fundamentalos.weather.BuildConfig
+import org.fundamentalos.weather.ipc.WeatherLocationResolver
+import org.fundamentalos.weather.ipc.WeatherProviderCache
 import org.fundamentalos.weather.location.SavedPlaces
 import org.fundamentalos.weather.settings.AppSettings
 import org.fundamentalos.weather.ui.map.InkTileStore
@@ -33,6 +35,10 @@ val module = module {
     // App-scoped so the map's field chunks survive leaving and reopening the map screen.
     single { WeatherFieldStore(androidContext()) }
     single { InkTileStore(androidContext()) }
+
+    // Cross-process weather provider: cache + background location for the refresh worker/service.
+    single { WeatherProviderCache(androidContext()) }
+    single { WeatherLocationResolver(androidContext(), get()) }
 
     viewModelOf(::MainViewModel)
 }
