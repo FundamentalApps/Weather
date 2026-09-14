@@ -7,6 +7,7 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.drawable.Icon
 import android.os.Bundle
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.drawable.DrawableCompat
@@ -43,7 +44,9 @@ internal object WeatherSnapshotFactory {
         MultilayerIcon.ColorTag.SUN -> sun
         MultilayerIcon.ColorTag.MOON -> moon
         MultilayerIcon.ColorTag.RAIN -> rain
-        MultilayerIcon.ColorTag.CLOUD -> cloud
+        // Smartspace icon only: render cloud elements white (brighter on the dark lock
+        // screen). The in-app icon keeps the theme grey via Compose, untouched.
+        MultilayerIcon.ColorTag.CLOUD -> Color.White
         MultilayerIcon.ColorTag.DUST -> dust
         MultilayerIcon.ColorTag.HOT -> hot
     }.toArgb()
