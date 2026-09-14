@@ -48,7 +48,7 @@ android_app {
     // @Parcelize (kotlinx.parcelize) backs the AIDL/IPC Parcelables. AGP applies the
     // kotlin-parcelize compiler plugin; generateBp does not carry that over, so turn
     // on the in-tree parcelize plugin here (compose is auto-applied by Soong, this is not).
-    kotlin_plugins: ["kotlin-parcelize-compiler-plugin"],
+    kotlin_plugins: ["kotlin-parcelize-compiler-plugin", "kotlin-serialize-compiler-plugin"],
 
     static_libs: [
         // DO NOT EDIT THIS SECTION MANUALLY
