@@ -14,6 +14,7 @@ import org.fundamentalos.weather.weather.domain.DailyForecast
 import org.fundamentalos.weather.weather.domain.HourlyForecast
 import org.fundamentalos.weather.weather.domain.MinutelyPrecipitation
 import org.fundamentalos.weather.weather.domain.WeatherWarning
+import org.fundamentalos.weather.ipc.WeatherLocationResolver
 import org.fundamentalos.weather.ipc.WeatherProviderCache
 import org.fundamentalos.weather.ipc.WeatherSnapshotFactory
 import org.fundamentalos.weather.ipc.WeatherUpdateBus
@@ -34,6 +35,9 @@ class MainViewModel(
     // Shared with the IPC provider/refresh worker: a foreground fetch updates it too, so the
     // lock-screen smartspace and the app read a single, latest weather source.
     private val weatherProviderCache: WeatherProviderCache,
+    // Same resolver the refresh worker uses: a foreground fix is remembered here so the worker can
+    // reuse the device's real position at night instead of falling back to a proxy-skewed IP fix.
+    private val weatherLocationResolver: WeatherLocationResolver,
 ): ViewModel() {
     val neverShowPermissionDialog = mutableStateOf(false)
 
@@ -317,6 +321,16 @@ class MainViewModel(
                     aqi.value = snapshot.airQuality
                     minutelyPrecipitation.value = snapshot.minutelyPrecipitation
                     warnings.value = snapshot.warnings
+                }
+
+                // Remember the device's own real position so the background refresh worker can
+                // reuse it at night, when the providers have no last-known fix and would otherwise
+                // fall back to a coarse IP location. Only genuine device fixes qualify -- never IP,
+                // a restored cache, or a saved place the user is merely browsing.
+                if (type == LocationType.GPS || type == LocationType.Network ||
+                    type == LocationType.Passive || type == LocationType.LastKnow
+                ) {
+                    weatherLocationResolver.recordDeviceFix(latitude, longitude)
                 }
 
                 // Keep the cross-process weather snapshot (lock-screen smartspace) in step with the
