@@ -1,6 +1,8 @@
 [versions]
 agp = "9.2.1"
 kotlin = "2.3.21"
+# LineageOS gradle-generatebp: emits Android.bp + vendored libs/ for the in-tree Soong build.
+generateBp = "+"
 coreKtx = "1.18.0"
 junit = "4.13.2"
 junitVersion = "1.3.0"
@@ -80,3 +82,4 @@ android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 kotlin-parcelize = { id = "org.jetbrains.kotlin.plugin.parcelize", version.ref = "kotlin" }
+lineageos-generatebp = { id = "org.lineageos.generatebp", version.ref = "generateBp" }

@@ -1,0 +1,122 @@
+//
+// SPDX-FileCopyrightText: The FundamentalOS Project
+// SPDX-License-Identifier: Apache-2.0
+//
+
+package {
+    default_applicable_licenses: ["Android-Apache-2.0"],
+}
+
+android_app {
+    name: "Weather",
+
+    srcs: [
+        "src/main/java/**/*.kt",
+        "src/main/java/**/*.java",
+        "src/main/aidl/**/*.aidl",
+    ],
+
+    aidl: {
+        local_include_dirs: ["src/main/aidl"],
+    },
+
+    resource_dirs: ["src/main/res"],
+
+    manifest: "src/main/AndroidManifest.xml",
+
+    sdk_version: "35",
+
+    static_libs: [
+        // DO NOT EDIT THIS SECTION MANUALLY
+        "androidx.activity_activity-compose",
+        "androidx.compose_compose-bom",
+        "androidx.compose.animation_animation",
+        "androidx.compose.animation_animation-core",
+        "androidx.compose.foundation_foundation",
+        "androidx.compose.foundation_foundation-layout",
+        "androidx.compose.material_material-icons-core",
+        "androidx.compose.material_material-icons-extended",
+        "androidx.compose.material_material-ripple",
+        "androidx.compose.material3_material3",
+        "androidx.compose.material3_material3-ripple",
+        "androidx.compose.runtime_runtime",
+        "androidx.compose.runtime_runtime-annotation",
+        "androidx.compose.runtime_runtime-retain",
+        "androidx.compose.runtime_runtime-saveable",
+        "androidx.compose.ui_ui",
+        "androidx.compose.ui_ui-geometry",
+        "androidx.compose.ui_ui-graphics",
+        "androidx.compose.ui_ui-text",
+        "androidx.compose.ui_ui-tooling-preview",
+        "androidx.compose.ui_ui-unit",
+        "androidx.compose.ui_ui-util",
+        "androidx.core_core-ktx",
+        "androidx.graphics_graphics-shapes",
+        "androidx.lifecycle_lifecycle-runtime",
+        "androidx.lifecycle_lifecycle-runtime-compose",
+        "androidx.lifecycle_lifecycle-runtime-ktx",
+        "androidx.lifecycle_lifecycle-viewmodel-compose",
+        "androidx.lifecycle_lifecycle-viewmodel-savedstate",
+        "androidx.navigation_navigation-common",
+        "androidx.navigation_navigation-compose",
+        "androidx.navigation_navigation-runtime",
+        "androidx.navigation3_navigation3-runtime",
+        "androidx.navigation3_navigation3-ui",
+        "androidx.navigationevent_navigationevent",
+        "androidx.navigationevent_navigationevent-compose",
+        "androidx.savedstate_savedstate",
+        "androidx.savedstate_savedstate-compose",
+        "androidx.tracing_tracing",
+        "androidx.window_window-core",
+        "androidx.work_work-runtime-ktx",
+        "Weather_com.google.accompanist_accompanist-permissions",
+        "com.google.android.material_material",
+        "Weather_dev.chrisbanes.haze_haze",
+        "Weather_dev.chrisbanes.haze_haze-android",
+        "Weather_dev.chrisbanes.haze_haze-materials",
+        "Weather_dev.chrisbanes.haze_haze-materials-android",
+        "Weather_io.github.fornewid_material-motion-compose-core",
+        "Weather_io.github.fornewid_material-motion-compose-core-android",
+        "Weather_io.github.kyant0_shapes",
+        "Weather_io.github.kyant0_shapes-android",
+        "Weather_io.insert-koin_koin-android",
+        "Weather_io.insert-koin_koin-bom",
+        "Weather_io.insert-koin_koin-compose",
+        "Weather_io.insert-koin_koin-compose-android",
+        "Weather_io.insert-koin_koin-compose-viewmodel",
+        "Weather_io.insert-koin_koin-compose-viewmodel-android",
+        "Weather_io.insert-koin_koin-compose-viewmodel-navigation",
+        "Weather_io.insert-koin_koin-compose-viewmodel-navigation-android",
+        "Weather_io.insert-koin_koin-core-viewmodel-android",
+        "Weather_io.ktor_ktor-client-android",
+        "Weather_io.ktor_ktor-client-content-negotiation",
+        "Weather_io.ktor_ktor-client-encoding",
+        "Weather_io.ktor_ktor-serialization-kotlinx-json",
+        "org.jetbrains.compose.runtime_runtime-android",
+        "org.jetbrains.compose.runtime_runtime-saveable-android",
+        "org.jetbrains.compose.ui_ui-android",
+        "org.jetbrains.compose.ui_ui-backhandler-android",
+        "org.jetbrains.compose.ui_ui-geometry-android",
+        "org.jetbrains.compose.ui_ui-graphics-android",
+        "org.jetbrains.compose.ui_ui-text-android",
+        "org.jetbrains.compose.ui_ui-unit-android",
+        "org.jetbrains.compose.ui_ui-util-android",
+        "kotlin-parcelize-runtime",
+        "kotlin-stdlib",
+        "kotlinx-coroutines-android",
+        "org.jetbrains.kotlinx_kotlinx-datetime",
+        "Weather_org.osmdroid_osmdroid-android",
+    ],
+
+    aaptflags: [
+        // DO NOT EDIT THIS SECTION MANUALLY
+        "--version-name",
+        "0.1.1",
+        "--version-code",
+        "94",
+    ],
+
+    optimize: {
+        proguard_flags_files: ["proguard-rules.pro"],
+    },
+}

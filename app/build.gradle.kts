@@ -1,6 +1,8 @@
 import com.android.build.api.dsl.ApplicationExtension
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.dsl.KotlinAndroidProjectExtension
+import org.lineageos.generatebp.GenerateBpPluginExtension
+import org.lineageos.generatebp.models.Module
 import java.util.Properties
 
 plugins {
@@ -8,6 +10,8 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.kotlin.parcelize)
+    // Emits Android.bp + vendored libs/ for the in-tree (Soong) build: ./gradlew :app:generateBp
+    alias(libs.plugins.lineageos.generatebp)
 }
 
 val localProperties = Properties().apply {
@@ -145,4 +149,45 @@ dependencies {
 
     implementation(libs.kotlinx.coroutines.android)
     testImplementation(libs.kotlinx.coroutines.test)
+}
+
+// Generates app/Android.bp (static_libs / aaptflags / sdk_version) and vendors non-AOSP
+// dependencies under app/libs/ for the in-tree Soong build. Run: ./gradlew :app:generateBp
+// The predicate decides which dependencies are assumed already present as Soong modules in the
+// AOSP tree (not vendored); everything else is copied into app/libs/ as a prebuilt.
+configure<GenerateBpPluginExtension> {
+    targetSdk.set(35)
+    minSdk.set(24)
+    versionCode.set(appVersionCode)
+    versionName.set(appVersionName)
+    availableInAOSP.set { module: Module ->
+        listOf(
+            "androidx.",
+            "org.jetbrains.",
+            "com.google.android.material",
+            "com.google.errorprone",
+            "com.google.guava",
+            "junit",
+        ).any { module.group.startsWith(it) || module.group == it }
+    }
+}
+
+// generatebp resolves a hardcoded "releaseRuntimeClasspath" configuration, but this app has a
+// "distribution" flavor dimension, so the real runtime classpaths are per-flavor
+// (inlineReleaseRuntimeClasspath / standaloneReleaseRuntimeClasspath) and no bare
+// releaseRuntimeClasspath exists. FundamentalOS ships the "inline" distribution, so expose a
+// resolvable configuration under the name generatebp expects that mirrors the inline release
+// runtime classpath (same dependencies + variant attributes) purely for :app:generateBp.
+afterEvaluate {
+    val inlineRelease = configurations.getByName("inlineReleaseRuntimeClasspath")
+    configurations.create("releaseRuntimeClasspath") {
+        extendsFrom(inlineRelease)
+        isCanBeConsumed = false
+        isCanBeResolved = true
+        inlineRelease.attributes.keySet().forEach { key ->
+            @Suppress("UNCHECKED_CAST")
+            val typed = key as org.gradle.api.attributes.Attribute<Any>
+            attributes.attribute(typed, inlineRelease.attributes.getAttribute(typed) as Any)
+        }
+    }
 }
