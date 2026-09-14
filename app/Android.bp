@@ -14,6 +14,8 @@ android_app {
         "src/main/java/**/*.kt",
         "src/main/java/**/*.java",
         "src/main/aidl/**/*.aidl",
+        // Soong-only BuildConfig; AGP generates its own, gradle ignores src/soong.
+        "src/soong/java/**/*.java",
     ],
 
     aidl: {
@@ -24,12 +26,33 @@ android_app {
 
     manifest: "src/main/AndroidManifest.xml",
 
-    sdk_version: "35",
+    // Built into FundamentalOS as a privileged system_ext app: platform-signed and
+    // using platform APIs (no sdk_version) so the exported AIDL weather service and
+    // its signature-level permission resolve against the platform.
+    platform_apis: true,
+    privileged: true,
+    system_ext_specific: true,
+    certificate: "platform",
+
+    // The app targets Kotlin 2.3 under gradle, where kotlin.time.Clock/Instant are
+    // stable; the tree kotlinc still gates them behind ExperimentalTime. gradle sets
+    // no opt-in flag, so carry it here for the in-tree build.
+    // -Xskip-metadata-version-check: com.kyant0:shapes 1.2.1 ships Kotlin 2.4.0
+    // metadata; the tree kotlinc (2.2.0) reads up to 2.3.0, so let it read the newer
+    // metadata rather than pinning an older shapes release.
+    kotlincflags: [
+        "-opt-in=kotlin.time.ExperimentalTime",
+        "-Xskip-metadata-version-check",
+    ],
+
+    // @Parcelize (kotlinx.parcelize) backs the AIDL/IPC Parcelables. AGP applies the
+    // kotlin-parcelize compiler plugin; generateBp does not carry that over, so turn
+    // on the in-tree parcelize plugin here (compose is auto-applied by Soong, this is not).
+    kotlin_plugins: ["kotlin-parcelize-compiler-plugin"],
 
     static_libs: [
         // DO NOT EDIT THIS SECTION MANUALLY
         "androidx.activity_activity-compose",
-        "androidx.compose_compose-bom",
         "androidx.compose.animation_animation",
         "androidx.compose.animation_animation-core",
         "androidx.compose.foundation_foundation",
@@ -69,29 +92,29 @@ android_app {
         "androidx.tracing_tracing",
         "androidx.window_window-core",
         "androidx.work_work-runtime-ktx",
-        "Weather_com.google.accompanist_accompanist-permissions",
+        "com.google.accompanist_accompanist-permissions",
         "com.google.android.material_material",
-        "Weather_dev.chrisbanes.haze_haze",
-        "Weather_dev.chrisbanes.haze_haze-android",
-        "Weather_dev.chrisbanes.haze_haze-materials",
-        "Weather_dev.chrisbanes.haze_haze-materials-android",
-        "Weather_io.github.fornewid_material-motion-compose-core",
-        "Weather_io.github.fornewid_material-motion-compose-core-android",
-        "Weather_io.github.kyant0_shapes",
-        "Weather_io.github.kyant0_shapes-android",
-        "Weather_io.insert-koin_koin-android",
-        "Weather_io.insert-koin_koin-bom",
-        "Weather_io.insert-koin_koin-compose",
-        "Weather_io.insert-koin_koin-compose-android",
-        "Weather_io.insert-koin_koin-compose-viewmodel",
-        "Weather_io.insert-koin_koin-compose-viewmodel-android",
-        "Weather_io.insert-koin_koin-compose-viewmodel-navigation",
-        "Weather_io.insert-koin_koin-compose-viewmodel-navigation-android",
-        "Weather_io.insert-koin_koin-core-viewmodel-android",
-        "Weather_io.ktor_ktor-client-android",
-        "Weather_io.ktor_ktor-client-content-negotiation",
-        "Weather_io.ktor_ktor-client-encoding",
-        "Weather_io.ktor_ktor-serialization-kotlinx-json",
+        "dev.chrisbanes.haze_haze",
+        "dev.chrisbanes.haze_haze-android",
+        "dev.chrisbanes.haze_haze-materials",
+        "dev.chrisbanes.haze_haze-materials-android",
+        "io.github.fornewid_material-motion-compose-core",
+        "io.github.fornewid_material-motion-compose-core-android",
+        "io.github.kyant0_shapes",
+        "io.github.kyant0_shapes-android",
+        "io.insert-koin_koin-android",
+        "io.insert-koin_koin-bom",
+        "io.insert-koin_koin-compose",
+        "io.insert-koin_koin-compose-android",
+        "io.insert-koin_koin-compose-viewmodel",
+        "io.insert-koin_koin-compose-viewmodel-android",
+        "io.insert-koin_koin-compose-viewmodel-navigation",
+        "io.insert-koin_koin-compose-viewmodel-navigation-android",
+        "io.insert-koin_koin-core-viewmodel-android",
+        "io.ktor_ktor-client-android",
+        "io.ktor_ktor-client-content-negotiation",
+        "io.ktor_ktor-client-encoding",
+        "io.ktor_ktor-serialization-kotlinx-json",
         "org.jetbrains.compose.runtime_runtime-android",
         "org.jetbrains.compose.runtime_runtime-saveable-android",
         "org.jetbrains.compose.ui_ui-android",
@@ -105,7 +128,7 @@ android_app {
         "kotlin-stdlib",
         "kotlinx-coroutines-android",
         "org.jetbrains.kotlinx_kotlinx-datetime",
-        "Weather_org.osmdroid_osmdroid-android",
+        "org.osmdroid_osmdroid-android",
     ],
 
     aaptflags: [

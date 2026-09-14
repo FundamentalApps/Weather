@@ -2,17 +2,19 @@ package org.fundamentalos.weather.ipc
 
 import android.app.Service
 import android.content.Intent
+import android.os.Bundle
 import android.os.IBinder
 import android.os.RemoteCallbackList
 import org.koin.core.context.GlobalContext
 
 /**
- * The bound, exported entry point other same-signature system apps (ASI Alt) reach to read the
- * current weather and subscribe to updates. Guarded by a signature-level permission in the manifest,
- * so only apps signed with the same platform key can bind.
+ * The bound, exported entry point other same-signature system apps (FundamentalIntelligence) reach
+ * to read the current weather and subscribe to updates. Guarded by a signature-level permission in
+ * the manifest, so only apps signed with the same platform key can bind.
  *
- * getCurrent() answers from the persisted cache (so it works on a cold bind); live updates are
- * fanned out to registered callbacks whenever the refresh worker publishes a new value.
+ * getCurrent() answers from the persisted cache (so it works on a cold bind) as an android.os.Bundle;
+ * live updates are fanned out to registered callbacks as the same Bundle whenever the refresh worker
+ * publishes a new value.
  */
 class WeatherProviderService : Service() {
 
@@ -38,8 +40,8 @@ class WeatherProviderService : Service() {
     override fun onBind(intent: Intent?): IBinder = binder
 
     private val binder = object : IWeatherProvider.Stub() {
-        override fun getCurrent(): WeatherSnapshot? =
-            cache.load()?.let { WeatherSnapshotFactory.toParcelable(this@WeatherProviderService, it) }
+        override fun getCurrent(): Bundle? =
+            cache.load()?.let { WeatherSnapshotFactory.toBundle(this@WeatherProviderService, it) }
 
         override fun registerCallback(cb: IWeatherCallback?) {
             if (cb == null) return
@@ -48,7 +50,7 @@ class WeatherProviderService : Service() {
             cache.load()?.let { cached ->
                 runCatching {
                     cb.onWeatherChanged(
-                        WeatherSnapshotFactory.toParcelable(this@WeatherProviderService, cached),
+                        WeatherSnapshotFactory.toBundle(this@WeatherProviderService, cached),
                     )
                 }
             }
@@ -61,7 +63,7 @@ class WeatherProviderService : Service() {
     }
 
     private fun broadcast(value: CachedWeather) {
-        val snapshot = WeatherSnapshotFactory.toParcelable(this, value)
+        val snapshot = WeatherSnapshotFactory.toBundle(this, value)
         val count = callbacks.beginBroadcast()
         try {
             for (i in 0 until count) {

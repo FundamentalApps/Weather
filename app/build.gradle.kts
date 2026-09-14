@@ -162,12 +162,25 @@ configure<GenerateBpPluginExtension> {
     versionName.set(appVersionName)
     availableInAOSP.set { module: Module ->
         listOf(
+            // Present in the AOSP tree already.
             "androidx.",
             "org.jetbrains.",
             "com.google.android.material",
             "com.google.errorprone",
             "com.google.guava",
             "junit",
+            // Provided as shared Soong prebuilts in vendor/fundamental/libraries,
+            // so treat them as in-tree here: generateBp emits a static_libs name
+            // reference instead of vendoring a private copy under app/libs/.
+            "io.ktor",
+            "io.insert-koin",
+            "io.github.fornewid",
+            "io.github.kyant0",
+            "dev.chrisbanes.haze",
+            "com.google.accompanist",
+            "co.touchlab",
+            "org.slf4j",
+            "org.osmdroid",
         ).any { module.group.startsWith(it) || module.group == it }
     }
 }

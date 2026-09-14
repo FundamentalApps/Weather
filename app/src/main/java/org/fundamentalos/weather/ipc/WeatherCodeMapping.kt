@@ -8,8 +8,8 @@ import org.fundamentalos.weather.R
  * The app does not carry a raw WMO code: its snapshots come from the FundamentalOS backend, which
  * aggregates Open-Meteo / MET Norway / WAQI and normalises everything to a CMA-style numeric string
  * ("100" clear, "305" light rain, "499" snow, "501" fog, ...; see [org.fundamentalos.weather.ui.components.weatherIconFor]).
- * For [WeatherSnapshot.wmoCode] we map that code back to the nearest WMO / Open-Meteo weather code,
- * and for [WeatherSnapshot.conditionIcon] we pick one existing app drawable per condition (the app
+ * For the bundle wmoCode key we map that code back to the nearest WMO / Open-Meteo weather code,
+ * and for the bundle conditionIcon key we pick one existing app drawable per condition (the app
  * itself draws multi-layer icons; a bound consumer only needs a single glyph).
  */
 internal object WeatherCodeMapping {

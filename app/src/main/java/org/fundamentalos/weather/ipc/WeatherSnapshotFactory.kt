@@ -4,6 +4,7 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.graphics.drawable.Icon
+import android.os.Bundle
 import org.fundamentalos.weather.MainActivity
 import java.time.Instant
 import java.time.LocalDateTime
@@ -35,23 +36,28 @@ internal object WeatherSnapshotFactory {
         )
     }
 
-    /** Rebuild the IPC snapshot, creating the system Parcelables against [context]. */
-    fun toParcelable(context: Context, cached: CachedWeather): WeatherSnapshot {
+    /**
+     * Rebuild the cross-process weather values as a plain [Bundle] -- the contract the consumer
+     * (FundamentalIntelligence) reads -- creating the system Parcelables against [context]. This is
+     * the single place the cached scalars are turned into the wire Bundle; both getCurrent() and the
+     * callback push go through here. The keys and their value types are the frozen IPC contract.
+     */
+    fun toBundle(context: Context, cached: CachedWeather): Bundle {
         val app = context.applicationContext
         val iconRes = WeatherCodeMapping.toIconRes(cached.conditionCode)
-        return WeatherSnapshot(
-            temperature = cached.temperature,
-            useCelsius = cached.useCelsius,
-            wmoCode = cached.wmoCode,
-            isDay = cached.isDay,
-            description = cached.description,
+        return Bundle().apply {
+            putDouble("temperature", cached.temperature)
+            putBoolean("useCelsius", cached.useCelsius)
+            putInt("wmoCode", cached.wmoCode)
+            putBoolean("isDay", cached.isDay)
+            putString("description", cached.description)
             // Addressed by this app's package so a consumer in another process can load it.
-            conditionIcon = Icon.createWithResource(app.packageName, iconRes),
-            locationName = cached.locationName,
-            observationTimeMillis = cached.observationTimeMillis,
-            validUntilMillis = cached.validUntilMillis,
-            tapIntent = launchIntent(app),
-        )
+            putParcelable("conditionIcon", Icon.createWithResource(app.packageName, iconRes))
+            putString("locationName", cached.locationName)
+            putLong("observationTimeMillis", cached.observationTimeMillis)
+            putLong("validUntilMillis", cached.validUntilMillis)
+            putParcelable("tapIntent", launchIntent(app))
+        }
     }
 
     private fun launchIntent(context: Context): PendingIntent {
