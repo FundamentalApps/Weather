@@ -24,7 +24,7 @@ Weather is a native Android weather app (`org.fundamentalos.weather`) built with
 
 Two product flavours in the `distribution` dimension: `standalone` (installed on its own, named "Fundamental Weather" via `app/src/standalone/res`) and `inline` (built into FundamentalOS as its weather app, named "Weather"). `BuildConfig.INLINE` tells them apart; the inline build hides the glass-text switch in Settings and the package name and credits on About. A `benchmark` build type (release-like, R8 off, `.benchmark` suffix) hosts the offline sky benchmark.
 
-The version code and name are constants at the top of `app/build.gradle.kts` (`appVersionCode`, `appVersionName`), bumped by hand for each release together with its `v*` tag; the build does not need git.
+The version code and name are literals in `app/build.gradle.kts`'s `defaultConfig` (`versionCode`, `versionName`), bumped by hand for each release together with its `v*` tag; the build does not need git, and F-Droid's `UpdateCheckMode: Tags` reads them straight off the file (so they must stay literals, not a `val`).
 
 `local.properties` (not committed) may set `app.fosApiBaseUrl` to point at a different FundamentalOS API base URL; it defaults to `https://api.fundamentalos.org`.
 

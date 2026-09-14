@@ -9,12 +9,6 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
 }
 
-// Bumped by hand for each release, together with its v* tag: static, so a build needs no git
-// history and F-Droid can read the version off this file. The code carries on from the commit
-// counts the earlier builds were numbered by, so it only ever goes up.
-val appVersionCode = 94
-val appVersionName = "0.1.1"
-
 val localProperties = Properties().apply {
     val file = rootProject.file("local.properties")
     if (file.isFile) {
@@ -35,8 +29,11 @@ extensions.configure<ApplicationExtension>("android") {
         applicationId = "org.fundamentalos.weather"
         minSdk = 24
         targetSdk = 35
-        versionCode = appVersionCode
-        versionName = appVersionName
+        // Static literals, bumped by hand with each v* tag: the build needs no git history, and
+        // F-Droid reads the version straight off this file for Tags-based auto-update. Kept as
+        // literals (not a val) so F-Droid's manifest parser can read them. Only ever goes up.
+        versionCode = 95
+        versionName = "0.1.2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
