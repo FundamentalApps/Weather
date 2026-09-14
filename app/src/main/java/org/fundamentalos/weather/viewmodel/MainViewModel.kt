@@ -14,6 +14,9 @@ import org.fundamentalos.weather.weather.domain.DailyForecast
 import org.fundamentalos.weather.weather.domain.HourlyForecast
 import org.fundamentalos.weather.weather.domain.MinutelyPrecipitation
 import org.fundamentalos.weather.weather.domain.WeatherWarning
+import org.fundamentalos.weather.ipc.WeatherProviderCache
+import org.fundamentalos.weather.ipc.WeatherSnapshotFactory
+import org.fundamentalos.weather.ipc.WeatherUpdateBus
 import org.fundamentalos.weather.settings.AppSettings
 import org.fundamentalos.weather.weather.provider.WeatherService
 import org.fundamentalos.weather.weather.provider.fos.FosApiClient
@@ -28,6 +31,9 @@ class MainViewModel(
     private val weatherService: WeatherService,
     private val fosApiClient: FosApiClient,
     private val settings: AppSettings,
+    // Shared with the IPC provider/refresh worker: a foreground fetch updates it too, so the
+    // lock-screen smartspace and the app read a single, latest weather source.
+    private val weatherProviderCache: WeatherProviderCache,
 ): ViewModel() {
     val neverShowPermissionDialog = mutableStateOf(false)
 
@@ -311,6 +317,18 @@ class MainViewModel(
                     aqi.value = snapshot.airQuality
                     minutelyPrecipitation.value = snapshot.minutelyPrecipitation
                     warnings.value = snapshot.warnings
+                }
+
+                // Keep the cross-process weather snapshot (lock-screen smartspace) in step with the
+                // fetch we just showed, so opening the app refreshes both from one source. Only the
+                // device's own location feeds it -- never a saved place the user is merely browsing.
+                if (type != LocationType.Saved) {
+                    runCatching {
+                        val cached = WeatherSnapshotFactory.toCached(snapshot)
+                        weatherProviderCache.save(cached)
+                        // Wakes a live-bound WeatherProviderService to push the new Bundle to FI.
+                        WeatherUpdateBus.publish(cached)
+                    }.onFailure { Log.w(TAG, "updateLocation: IPC cache update failed", it) }
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "updateLocation: Failed to refresh weather", e)
