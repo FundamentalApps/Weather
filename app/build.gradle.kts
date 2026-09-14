@@ -158,8 +158,8 @@ dependencies {
 configure<GenerateBpPluginExtension> {
     targetSdk.set(35)
     minSdk.set(24)
-    versionCode.set(appVersionCode)
-    versionName.set(appVersionName)
+    versionCode.set(95)
+    versionName.set("0.1.2")
     availableInAOSP.set { module: Module ->
         listOf(
             // Present in the AOSP tree already.
