@@ -12,8 +12,8 @@ plugins {
 // Bumped by hand for each release, together with its v* tag: static, so a build needs no git
 // history and F-Droid can read the version off this file. The code carries on from the commit
 // counts the earlier builds were numbered by, so it only ever goes up.
-val appVersionCode = 93
-val appVersionName = "0.1.0"
+val appVersionCode = 94
+val appVersionName = "0.1.1"
 
 val localProperties = Properties().apply {
     val file = rootProject.file("local.properties")
