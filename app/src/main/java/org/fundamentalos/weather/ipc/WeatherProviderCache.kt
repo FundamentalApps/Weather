@@ -21,6 +21,11 @@ data class CachedWeather(
     val locationName: String?,
     val observationTimeMillis: Long,
     val validUntilMillis: Long,
+    // Tomorrow's forecast for the weather-clock at-a-glance; null before a forecast is fetched.
+    val tomorrowTempMaxCelsius: Int? = null,
+    val tomorrowTempMinCelsius: Int? = null,
+    val tomorrowConditionCode: String? = null,
+    val tomorrowDescription: String? = null,
 )
 
 /** Persists the latest [CachedWeather] in its own shared-preferences file, as JSON. */

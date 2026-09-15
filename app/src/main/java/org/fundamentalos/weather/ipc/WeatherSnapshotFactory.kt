@@ -67,8 +67,8 @@ internal object WeatherSnapshotFactory {
      * exactly as the in-app [org.fundamentalos.weather.ui.components.MultilayerIcon] composable does.
      * Returns null if nothing could be drawn, so the caller can fall back to the single-glyph icon.
      */
-    private fun composeConditionIcon(context: Context, cached: CachedWeather): Icon? {
-        val layers = weatherIconFor(cached.conditionCode, cached.isDay).layers
+    private fun composeConditionIcon(context: Context, conditionCode: String, isDay: Boolean): Icon? {
+        val layers = weatherIconFor(conditionCode, isDay).layers
         if (layers.isEmpty()) return null
         val bitmap = Bitmap.createBitmap(ICON_SIZE_PX, ICON_SIZE_PX, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bitmap)
@@ -88,6 +88,8 @@ internal object WeatherSnapshotFactory {
         val current = domain.current
         val code = current.condition.iconCode
         val now = System.currentTimeMillis()
+        // daily[0] is today, daily[1] tomorrow -- feeds the lock-screen at-a-glance forecast.
+        val tomorrow = domain.daily.getOrNull(1)
         return CachedWeather(
             // The app is Celsius-only; it has no temperature-unit setting, so useCelsius is always true.
             temperature = current.tempCelsius.toDouble(),
@@ -99,6 +101,10 @@ internal object WeatherSnapshotFactory {
             locationName = domain.location.name,
             observationTimeMillis = parseTimeMillis(current.observedAt) ?: now,
             validUntilMillis = now + VALID_FOR_MILLIS,
+            tomorrowTempMaxCelsius = tomorrow?.tempMaxCelsius,
+            tomorrowTempMinCelsius = tomorrow?.tempMinCelsius,
+            tomorrowConditionCode = tomorrow?.dayCondition?.iconCode,
+            tomorrowDescription = tomorrow?.dayCondition?.text,
         )
     }
 
@@ -113,8 +119,14 @@ internal object WeatherSnapshotFactory {
         // Prefer the app's full colour multi-layer glyph (drawn to a bitmap); fall back to the
         // single monochrome resource glyph if compositing yields nothing. The consumer
         // (WeatherSmartspaceView) draws the icon un-tinted, so the colours survive to the lock screen.
-        val conditionIcon = runCatching { composeConditionIcon(app, cached) }.getOrNull()
-            ?: Icon.createWithResource(app.packageName, WeatherCodeMapping.toIconRes(cached.conditionCode))
+        val conditionIcon =
+            runCatching { composeConditionIcon(app, cached.conditionCode, cached.isDay) }.getOrNull()
+                ?: Icon.createWithResource(app.packageName, WeatherCodeMapping.toIconRes(cached.conditionCode))
+        // Tomorrow's forecast glyph for the weather-clock at-a-glance (day condition).
+        val tomorrowIcon = cached.tomorrowConditionCode?.let { code ->
+            runCatching { composeConditionIcon(app, code, true) }.getOrNull()
+                ?: Icon.createWithResource(app.packageName, WeatherCodeMapping.toIconRes(code))
+        }
         return Bundle().apply {
             putDouble("temperature", cached.temperature)
             putBoolean("useCelsius", cached.useCelsius)
@@ -126,6 +138,15 @@ internal object WeatherSnapshotFactory {
             putLong("observationTimeMillis", cached.observationTimeMillis)
             putLong("validUntilMillis", cached.validUntilMillis)
             putParcelable("tapIntent", launchIntent(app))
+            // Tomorrow's forecast for the weather-clock at-a-glance; absent keys mean no card.
+            val tomorrowMax = cached.tomorrowTempMaxCelsius
+            val tomorrowMin = cached.tomorrowTempMinCelsius
+            if (tomorrowMax != null && tomorrowMin != null) {
+                putInt("tomorrowTempMax", tomorrowMax)
+                putInt("tomorrowTempMin", tomorrowMin)
+                putString("tomorrowDescription", cached.tomorrowDescription)
+                if (tomorrowIcon != null) putParcelable("tomorrowConditionIcon", tomorrowIcon)
+            }
         }
     }
 
