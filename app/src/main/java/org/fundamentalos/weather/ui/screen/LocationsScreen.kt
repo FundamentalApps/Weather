@@ -34,6 +34,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -200,6 +201,28 @@ fun LocationsScreen(
         SavedPlace(it.name, it.city, it.province, it.country, it.latitude, it.longitude)
     }
 
+    // The saved place currently being shown, if any. The surfaceBright highlight sits on that
+    // place's row; with none (following the device), it sits on the fixed field at the top.
+    val currentPlace = vm.currentLocation.value?.let { cur ->
+        val asPlace = SavedPlace(cur.name, cur.city, cur.province, cur.country, cur.latitude, cur.longitude)
+        savedPlaces.places.firstOrNull { it.isSameSpot(asPlace) }
+    }
+
+    // The single surfaceBright highlight glides to the current place's row, or rests at the field
+    // slot (top) while following the device. It follows the list rigidly while scrolling; only a
+    // change of selection arms one glide.
+    val currentRowY = remember { mutableFloatStateOf(Float.NaN) }
+    val highlightTarget = if (currentPlace != null) currentRowY.floatValue else restY.floatValue
+    val highlightY = remember { Animatable(Float.NaN) }
+    var glideHighlight by remember { mutableStateOf(false) }
+    LaunchedEffect(currentPlace) { glideHighlight = true }
+    LaunchedEffect(highlightTarget) {
+        if (highlightTarget.isNaN()) return@LaunchedEffect
+        if (highlightY.value.isNaN() || !glideHighlight) highlightY.snapTo(highlightTarget)
+        else highlightY.animateTo(highlightTarget, tween(320, easing = FastOutSlowInEasing))
+        glideHighlight = false
+    }
+
     // What the bar blurs: the places behind it as they scroll up.
     val listHaze = remember { HazeState() }
     val collapsingTitle = rememberCollapsingTitle()
@@ -208,8 +231,24 @@ fun LocationsScreen(
     Surface(modifier = modifier.fillMaxSize(), color = MaterialTheme.colorScheme.surfaceContainer) {
         // Sideways, a notch sits at one side; the content keeps clear of it.
         Box(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.displayCutout.only(WindowInsetsSides.Horizontal))) {
+            // The moving highlight, drawn under the list so the row text sits on top of it.
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = FieldInset)
+                    .height(FieldHeight)
+                    .offset {
+                        IntOffset(0, if (highlightY.value.isNaN()) 0 else highlightY.value.roundToInt())
+                    }
+                    .graphicsLayer {
+                        alpha = if (highlightY.value.isNaN()) 0f else (1f - travel.value)
+                    }
+                    .clip(RoundedRectangle(FieldCorner))
+                    .background(MaterialTheme.colorScheme.surfaceBright),
+            )
             SavedPlacesList(
                 places = savedPlaces.places,
+                currentPlace = currentPlace,
                 onOpen = { place ->
                     vm.selectPlace(place.latitude, place.longitude)
                     onDone()
@@ -217,10 +256,12 @@ fun LocationsScreen(
                 onRemove = savedPlaces::remove,
                 onAdd = { searching = true },
                 onFieldSlotPlaced = { restY.floatValue = it },
+                onCurrentRowPlaced = { currentRowY.floatValue = it },
                 collapsingTitle = collapsingTitle,
+                // No opaque background here: the Surface behind provides it, so the moving highlight
+                // drawn under this list shows through at the current place's row.
                 modifier = Modifier
                     .hazeSource(listHaze)
-                    .background(MaterialTheme.colorScheme.surfaceContainer)
                     .graphicsLayer { alpha = 1f - travel.value },
             )
 
@@ -239,6 +280,9 @@ fun LocationsScreen(
                 query = query,
                 onQueryChange = { query = it },
                 searching = searching,
+                // The field's own background fades in as it travels up to search, crossfading with
+                // the resting highlight (which fades out on 1 - travel), so both directions match.
+                bgAlpha = travel.value,
                 deviceLocation = here?.name ?: stringResource(vm.locationLabel),
                 onUseLocation = {
                     vm.useDeviceLocation()
@@ -290,10 +334,12 @@ fun LocationsScreen(
 @Composable
 private fun SavedPlacesList(
     places: List<SavedPlace>,
+    currentPlace: SavedPlace?,
     onOpen: (SavedPlace) -> Unit,
     onRemove: (SavedPlace) -> Unit,
     onAdd: () -> Unit,
     onFieldSlotPlaced: (Float) -> Unit,
+    onCurrentRowPlaced: (Float) -> Unit,
     collapsingTitle: CollapsingTitle,
     modifier: Modifier = Modifier,
 ) {
@@ -320,9 +366,31 @@ private fun SavedPlacesList(
                 )
             }
         }
-        items(places) { place ->
-            PlaceRow(place = place, onClick = { onOpen(place) }) {
-                RowAction(Icons.Default.Close, stringResource(R.string.remove)) { onRemove(place) }
+        itemsIndexed(
+            places,
+            // A stable key per place so add/remove animate (and the highlight tracks the right row).
+            key = { _, place -> "${place.latitude},${place.longitude}" },
+        ) { index, place ->
+            val isCurrent = currentPlace != null && place.isSameSpot(currentPlace)
+            // Drop the divider on both sides of the highlighted row -- its own (below) and the one
+            // above it, which is the previous row's divider; every other divider stays.
+            val nextIsCurrent = currentPlace != null &&
+                index + 1 < places.size && places[index + 1].isSameSpot(currentPlace)
+            // The current row reports where it is, so the moving highlight can glide onto it.
+            val rowModifier =
+                if (isCurrent) {
+                    Modifier.onGloballyPositioned { onCurrentRowPlaced(it.positionInRoot().y) }
+                } else {
+                    Modifier
+                }
+            Box(rowModifier.animateItem()) {
+                PlaceRow(
+                    place = place,
+                    onClick = { onOpen(place) },
+                    showDivider = !isCurrent && !nextIsCurrent,
+                ) {
+                    RowAction(Icons.Default.Close, stringResource(R.string.remove)) { onRemove(place) }
+                }
             }
         }
         item {
@@ -438,6 +506,7 @@ private fun SearchResultsLayer(
 private fun PlaceRow(
     place: SavedPlace,
     onClick: (() -> Unit)? = null,
+    showDivider: Boolean = true,
     trailing: @Composable RowScope.() -> Unit,
 ) {
     Column {
@@ -445,8 +514,11 @@ private fun PlaceRow(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(RowHeight)
+                // Same inset and corner as the field pill, so the moving highlight lines up on it.
+                .padding(horizontal = FieldInset)
+                .clip(RoundedRectangle(FieldCorner))
                 .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
-                .padding(start = RowTextInset, end = RowTextInset),
+                .padding(horizontal = FieldPadding),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Row(
@@ -478,10 +550,12 @@ private fun PlaceRow(
             Spacer(Modifier.width(RowPartGap))
             trailing()
         }
-        HorizontalDivider(
-            modifier = Modifier.padding(horizontal = DividerInset),
-            color = MaterialTheme.colorScheme.outlineVariant,
-        )
+        if (showDivider) {
+            HorizontalDivider(
+                modifier = Modifier.padding(horizontal = DividerInset),
+                color = MaterialTheme.colorScheme.outlineVariant,
+            )
+        }
     }
 }
 
@@ -506,6 +580,7 @@ private fun SearchField(
     query: String,
     onQueryChange: (String) -> Unit,
     searching: Boolean,
+    bgAlpha: Float,
     deviceLocation: String,
     onUseLocation: () -> Unit,
     focusRequester: FocusRequester,
@@ -517,8 +592,9 @@ private fun SearchField(
             .padding(horizontal = FieldInset)
             .height(FieldHeight)
             .clip(RoundedRectangle(FieldCorner))
-            // A step brighter than the container it sits on, the way a field is lifted off a page.
-            .background(MaterialTheme.colorScheme.surfaceBright)
+            // Its own surfaceBright fades in as it travels up to search (bgAlpha = travel), crossfading
+            // with the resting highlight behind it; at rest that highlight carries the background.
+            .background(MaterialTheme.colorScheme.surfaceBright.copy(alpha = bgAlpha))
             .clickable(enabled = !searching, onClick = onUseLocation)
             .padding(horizontal = FieldPadding),
         verticalAlignment = Alignment.CenterVertically,

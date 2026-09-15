@@ -18,6 +18,8 @@ import org.fundamentalos.weather.ipc.WeatherLocationResolver
 import org.fundamentalos.weather.ipc.WeatherProviderCache
 import org.fundamentalos.weather.ipc.WeatherSnapshotFactory
 import org.fundamentalos.weather.ipc.WeatherUpdateBus
+import org.fundamentalos.weather.location.SavedPlace
+import org.fundamentalos.weather.location.SelectedLocation
 import org.fundamentalos.weather.settings.AppSettings
 import org.fundamentalos.weather.weather.provider.WeatherService
 import org.fundamentalos.weather.weather.provider.fos.FosApiClient
@@ -38,6 +40,9 @@ class MainViewModel(
     // Same resolver the refresh worker uses: a foreground fix is remembered here so the worker can
     // reuse the device's real position at night instead of falling back to a proxy-skewed IP fix.
     private val weatherLocationResolver: WeatherLocationResolver,
+    // The one place the user is currently showing, persisted so it survives a restart and so the
+    // app UI, the smartspace push and the background worker all follow the same choice.
+    private val selectedLocation: SelectedLocation,
 ): ViewModel() {
     val neverShowPermissionDialog = mutableStateOf(false)
 
@@ -59,6 +64,15 @@ class MainViewModel(
 
     val minutelyPrecipitation = mutableStateOf<MinutelyPrecipitation?>(null)
     val warnings = mutableStateOf<List<WeatherWarning>>(emptyList())
+
+    init {
+        // Restore the place the user last picked (persisted), so it survives an app restart. Saved
+        // has the highest LocationType priority, so the device channels LocationProvider kicks off
+        // afterwards will not override it.
+        selectedLocation.load()?.let {
+            updateLocationAndRefresh(it.latitude, it.longitude, LocationType.Saved, force = true)
+        }
+    }
 
     data class LocationStatus(
         val gpsStatus: GpsStatus,
@@ -258,6 +272,7 @@ class MainViewModel(
 
     /** Hand the screen back to the device's own location. */
     fun useDeviceLocation() {
+        selectedLocation.clear()
         currentLocation.value = null
         locationStatus.value = LocationStatus.new()
         ipLocateStarted = false
@@ -323,6 +338,21 @@ class MainViewModel(
                     warnings.value = snapshot.warnings
                 }
 
+                // Persist a place the user picked so it survives a restart, and so the smartspace
+                // and the background worker follow it too. Cleared by useDeviceLocation().
+                if (type == LocationType.Saved) {
+                    selectedLocation.save(
+                        SavedPlace(
+                            name = location.name,
+                            city = location.city,
+                            province = location.province,
+                            country = location.country,
+                            latitude = location.latitude,
+                            longitude = location.longitude,
+                        )
+                    )
+                }
+
                 // Remember the device's own real position so the background refresh worker can
                 // reuse it at night, when the providers have no last-known fix and would otherwise
                 // fall back to a coarse IP location. Only genuine device fixes qualify -- never IP,
@@ -334,16 +364,14 @@ class MainViewModel(
                 }
 
                 // Keep the cross-process weather snapshot (lock-screen smartspace) in step with the
-                // fetch we just showed, so opening the app refreshes both from one source. Only the
-                // device's own location feeds it -- never a saved place the user is merely browsing.
-                if (type != LocationType.Saved) {
-                    runCatching {
-                        val cached = WeatherSnapshotFactory.toCached(snapshot)
-                        weatherProviderCache.save(cached)
-                        // Wakes a live-bound WeatherProviderService to push the new Bundle to FI.
-                        WeatherUpdateBus.publish(cached)
-                    }.onFailure { Log.w(TAG, "updateLocation: IPC cache update failed", it) }
-                }
+                // fetch just shown -- for whatever location is on screen now, the device's own or a
+                // place the user picked -- so the app, the smartspace and the worker share one source.
+                runCatching {
+                    val cached = WeatherSnapshotFactory.toCached(snapshot)
+                    weatherProviderCache.save(cached)
+                    // Wakes a live-bound WeatherProviderService to push the new Bundle to FI.
+                    WeatherUpdateBus.publish(cached)
+                }.onFailure { Log.w(TAG, "updateLocation: IPC cache update failed", it) }
             } catch (e: Exception) {
                 Log.e(TAG, "updateLocation: Failed to refresh weather", e)
                 cityStatus.value = CityStatus.Error

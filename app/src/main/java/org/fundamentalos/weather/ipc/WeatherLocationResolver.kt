@@ -7,6 +7,7 @@ import android.location.LocationManager
 import androidx.core.content.ContextCompat
 import androidx.core.content.edit
 import androidx.core.content.getSystemService
+import org.fundamentalos.weather.location.SelectedLocation
 import org.fundamentalos.weather.weather.provider.fos.FosApiClient
 
 /**
@@ -24,6 +25,7 @@ import org.fundamentalos.weather.weather.provider.fos.FosApiClient
 class WeatherLocationResolver(
     private val context: Context,
     private val fosApiClient: FosApiClient,
+    private val selectedLocation: SelectedLocation,
 ) {
     data class Fix(val latitude: Double, val longitude: Double)
 
@@ -31,9 +33,14 @@ class WeatherLocationResolver(
         context.applicationContext.getSharedPreferences("weather_last_fix", Context.MODE_PRIVATE)
 
     suspend fun resolve(): Fix? =
-        lastKnownFix()?.also { recordDeviceFix(it.latitude, it.longitude) }
+        selectedFix()
+            ?: lastKnownFix()?.also { recordDeviceFix(it.latitude, it.longitude) }
             ?: lastGoodFix()
             ?: ipFix()
+
+    /** The place the user picked in the app (persisted), if any -- it wins over any device fix. */
+    private fun selectedFix(): Fix? =
+        selectedLocation.load()?.let { Fix(it.latitude, it.longitude) }
 
     /**
      * Remember the device's own real position. The foreground app calls this whenever a GPS/network

@@ -4,6 +4,7 @@ import org.fundamentalos.weather.BuildConfig
 import org.fundamentalos.weather.ipc.WeatherLocationResolver
 import org.fundamentalos.weather.ipc.WeatherProviderCache
 import org.fundamentalos.weather.location.SavedPlaces
+import org.fundamentalos.weather.location.SelectedLocation
 import org.fundamentalos.weather.settings.AppSettings
 import org.fundamentalos.weather.ui.map.InkTileStore
 import org.fundamentalos.weather.ui.map.WeatherFieldStore
@@ -36,9 +37,13 @@ val module = module {
     single { WeatherFieldStore(androidContext()) }
     single { InkTileStore(androidContext()) }
 
+    // The one place the user is currently showing (persisted); shared by the UI, the smartspace
+    // push and the background refresh worker so all three follow the same choice.
+    single { SelectedLocation(androidContext()) }
+
     // Cross-process weather provider: cache + background location for the refresh worker/service.
     single { WeatherProviderCache(androidContext()) }
-    single { WeatherLocationResolver(androidContext(), get()) }
+    single { WeatherLocationResolver(androidContext(), get(), get()) }
 
     viewModelOf(::MainViewModel)
 }
