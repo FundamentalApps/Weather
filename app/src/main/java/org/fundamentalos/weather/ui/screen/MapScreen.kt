@@ -8,7 +8,9 @@ import android.content.Context
 import android.graphics.Color as AndroidColor
 import android.graphics.ColorMatrix
 import android.graphics.ColorMatrixColorFilter
+import android.net.Uri
 import android.os.Build
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
@@ -174,7 +176,13 @@ fun MapScreen(
     var layers by remember { mutableStateOf(fieldStore.layers ?: emptyList()) }
 
     LaunchedEffect(Unit) {
-        val fresh = runCatching { api.mapLayers().layers }.getOrNull() ?: return@LaunchedEffect
+        val answered = runCatching { api.mapLayers().layers }.getOrNull() ?: return@LaunchedEffect
+        // The field store and osmdroid both fetch straight from these templates; drop any that
+        // would go in cleartext here, where the server's answer enters, so neither ever sees one.
+        val fresh = answered.filter(FosMapLayer::hasSecureTemplate)
+        if (fresh.size != answered.size) {
+            Log.w("MapScreen", "dropped ${answered.size - fresh.size} map layer(s) with a cleartext template")
+        }
         fieldStore.layers = fresh
         layers = fresh
     }
@@ -464,6 +472,19 @@ private fun LegendCard(
             }
         }
     }
+}
+
+/**
+ * Whether the layer's tiles would travel encrypted. https is trusted; http only to a dev server on
+ * loopback, matching the loopback carve-out in network_security_config so local development still
+ * works. Everything else is treated as cleartext and dropped before it reaches the network.
+ */
+private fun FosMapLayer.hasSecureTemplate(): Boolean {
+    val uri = Uri.parse(urlTemplate)
+    if (uri.scheme?.lowercase() == "https") return true
+    val host = uri.host?.lowercase()
+    return uri.scheme?.lowercase() == "http" &&
+        (host == "localhost" || host == "127.0.0.1" || host == "10.0.2.2")
 }
 
 /** An xyz layer as osmdroid sees it: a tile source, its opacity, and nothing to draw while it loads. */

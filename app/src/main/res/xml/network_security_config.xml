@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+     Cleartext is refused everywhere: the API, the map field chunks and the OSM vector tiles
+     all travel over https. The only exception is a dev server reached over loopback
+     (app.fosApiBaseUrl in local.properties, e.g. http://10.0.2.2:8080), so local development
+     keeps working without opening the app to cleartext on the wire.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false" />
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">localhost</domain>
+        <domain includeSubdomains="true">127.0.0.1</domain>
+        <domain includeSubdomains="true">10.0.2.2</domain>
+    </domain-config>
+</network-security-config>
