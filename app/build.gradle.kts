@@ -30,6 +30,13 @@ extensions.configure<ApplicationExtension>("android") {
     namespace = "org.fundamentalos.weather"
     compileSdk = 37
 
+    dependenciesInfo {
+        // Disables dependency metadata when building APKs (for IzzyOnDroid/F-Droid)
+        includeInApk = false
+        // Disables dependency metadata when building Android App Bundles (for Google Play)
+        includeInBundle = false
+    }
+
     defaultConfig {
         applicationId = "org.fundamentalos.weather"
         minSdk = 24
