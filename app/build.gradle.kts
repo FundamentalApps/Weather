@@ -44,8 +44,8 @@ extensions.configure<ApplicationExtension>("android") {
         // Static literals, bumped by hand with each v* tag: the build needs no git history, and
         // F-Droid reads the version straight off this file for Tags-based auto-update. Kept as
         // literals (not a val) so F-Droid's manifest parser can read them. Only ever goes up.
-        versionCode = 100
-        versionName = "0.1.7"
+        versionCode = 101
+        versionName = "0.1.8"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -165,8 +165,8 @@ dependencies {
 configure<GenerateBpPluginExtension> {
     targetSdk.set(35)
     minSdk.set(24)
-    versionCode.set(100)
-    versionName.set("0.1.7")
+    versionCode.set(101)
+    versionName.set("0.1.8")
     availableInAOSP.set { module: Module ->
         listOf(
             // Present in the AOSP tree already.
