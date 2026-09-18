@@ -53,6 +53,7 @@ android_app {
     static_libs: [
         // DO NOT EDIT THIS SECTION MANUALLY
         "androidx.activity_activity-compose",
+        "androidx.compose_compose-bom",
         "androidx.compose.animation_animation",
         "androidx.compose.animation_animation-core",
         "androidx.compose.foundation_foundation",
@@ -134,9 +135,9 @@ android_app {
     aaptflags: [
         // DO NOT EDIT THIS SECTION MANUALLY
         "--version-name",
-        "0.1.1",
+        "0.1.9",
         "--version-code",
-        "94",
+        "102",
     ],
 
     optimize: {
